@@ -1,0 +1,27 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "daedalus"
+version = "0.1.0"
+description = "Compilador C pedagógico y traductor de diagnósticos de GCC/Clang/ld a español rioplatense"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "typer>=0.9.0",
+    "rich>=13.0.0",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+daedalus = "daedalus.cli:main"
+
+[project.entry-points."ripley.plugins"]
+compiler = "daedalus.ripley_plugin:DaedalusPlugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/daedalus"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
