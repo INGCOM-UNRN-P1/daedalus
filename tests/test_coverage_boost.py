@@ -54,7 +54,7 @@ def test_cli_translate_file(tmp_path):
 def test_cli_doctor():
     res = runner.invoke(app, ["doctor"])
     assert res.exit_code == 0
-    assert "Toolchain de Compilación" in res.stdout
+    assert "Diagnóstico de Compiladores" in res.stdout
 
 
 def test_compilar_archivos_no_existente(tmp_path):
@@ -68,3 +68,30 @@ def test_cli_main_block(monkeypatch):
         daedalus.cli.main()
     except SystemExit as e:
         assert e.code == 0
+
+
+def test_cli_explain_opt():
+    res = runner.invoke(app, ["explain-opt", "O2"])
+    assert res.exit_code == 0
+    assert "Optimización estándar" in res.stdout
+
+
+def test_cli_preprocess_and_compile_commands(tmp_path):
+    src = tmp_path / "app.c"
+    src.write_text("#define VAL 42\nint main(void) { return VAL; }\n")
+
+    res_prep = runner.invoke(app, ["preprocess", str(src)])
+    assert res_prep.exit_code == 0
+    assert "42" in res_prep.stdout
+
+    res_cc = runner.invoke(app, ["compile-commands", str(src), "-o", str(tmp_path / "compile_commands.json")])
+    assert res_cc.exit_code == 0
+    assert (tmp_path / "compile_commands.json").is_file()
+
+
+def test_diagram_pointer_visualizer():
+    from daedalus.core.diagram import generar_diagrama_punteros, detectar_incompatibilidad_punteros
+    diag = generar_diagrama_punteros("int**", "int*")
+    assert "Visualizador de Indirección" in diag
+    assert "Sobra un operador" in diag
+
