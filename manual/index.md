@@ -177,3 +177,54 @@ check-daedalus:
 ````
 
 Ejecutá `make check-daedalus` antes de cada commit para asegurar que tu código conserve el estado de aprobación.
+
+---
+
+(manual-daedalus-arquitectura)=
+## 7. Arquitectura Interna y Mecanismo Técnico
+
+La herramienta **`daedalus`** implementa un motor de alta precisión basado en:
+
+- **Tecnología Núcleo:** `GCC 13/14 + Clang 18 + Regex Pedagogical Diagnostics Matcher + Cátedra Flags Engine`.
+- **Aislamiento y Determinismo:** Diseñada para operar sin efectos colaterales en entornos de integración continua (CI), terminales de estudiantes y servidores docentes headless.
+- **Manejo de Errores Pedagógico:** Todo fallo de sintaxis, memoria o lógica se traduce en una acción prescriptiva concreta con su respectiva justificación técnica.
+
+---
+
+(manual-daedalus-ecosistema)=
+## 8. Integración y Conexión con el Ecosistema
+
+````{note}
+Ninguna herramienta opera de forma aislada. **`daedalus`** forma parte del pipeline integral de evaluación, verificación y enseñanza de la cátedra.
+````
+
+### Diagrama de Flujo e Interoperabilidad
+
+````{mermaid}
+graph TD
+    SRC[Código C del Estudiante] --> DAE[Daedalus: Compilador Pedagógico]
+    DAE -->|Traducción de Warnings| TERM[Terminal Estudiante]
+    DAE -->|Citas Normativas| ESP[Esper: Estándar ISO C11/C23]
+    DAE -->|Binario con ASan/UBSan| TET[Tetsuo: Explicador Sanitizers]
+    DAE -->|Binario Listo| NOS[Nostromo: Sandbox y Tests]
+````
+
+### Matriz de Intercambio de Datos
+
+| Canal | Herramientas Conectadas | Tipo de Datos Transferidos |
+| :--- | :--- | :--- |
+| **Entradas (Inputs)** | - `Código fuente de estudiantes y starter kits` | Código fuente, AST, binarios, testcases, contratos |
+| **Salidas (Outputs)** | - `tetsuo (sanitizers)`
+- `hal (diagnósticos de crash)`
+- `nostromo (ejecución)` | Informes Markdown, diagnósticos Rich, JSON, actas |
+| **Sincronización** | `esper`, `ripley`, `hal`, `tetsuo` | Validación cruzada, flags compartidos y autofix |
+
+### Pipeline de Integración Recomendado
+
+Podés encadenar `daedalus` con otras herramientas del ecosistema en una única línea de comando:
+
+````{code-block} bash
+# Pipeline de integración típico
+daedalus compile src/*.c -o bin/app && nostromo run --binary ./bin/app
+````
+
