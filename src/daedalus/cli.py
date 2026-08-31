@@ -14,6 +14,10 @@ from rich.table import Table
 
 from daedalus import __version__
 from daedalus.core.compiler import compilar_archivos
+from daedalus.core.deps import construir_grafo_dependencias, detectar_dependencias_circulares
+from daedalus.core.macro_explainer import expandir_macro
+from daedalus.core.standards import sugerir_flags_pedagogicos, verificar_compatibilidad_estandares
+from daedalus.core.stats import obtener_estadisticas, registrar_diagnosticos
 from daedalus.core.translator import parsear_stderr_compilador
 
 console = Console()
@@ -55,7 +59,7 @@ def generar_seccion_markdown(resultado) -> str:
     if resultado.binario:
         lines.append(f"- **Binario de salida:** `{resultado.binario}`")
     lines.append(f"- **Diagnósticos detectados:** {len(resultado.diagnosticos)}")
-    lines.append(f"- **Banderas utilizadas:** `{resultado.flags_utilizadas}`\n")
+    lines.append(f"- **Banderas utilizadas:** `{resultado.flags_utilizadas if hasattr(resultado, 'flags_utilizadas') else 'cátedra default'}`\n")
 
     if resultado.exito and not resultado.diagnosticos:
         lines.append("> [!TIP]\n> **Compilación Limpia:** El código compiló sin errores ni advertencias bajo los estándares estrictos de la cátedra (`-Wall -Wextra -Werror -std=c11 -pedantic`).\n")
@@ -76,11 +80,16 @@ def compile_cmd(
     output: Optional[Path] = typer.Option(None, "--output", "-o", help="Ruta del binario de salida."),
     json_output: bool = typer.Option(False, "--json", help="Emitir reporte en JSON."),
     output_md: Optional[Path] = typer.Option(None, "--md", "--output-md", help="Generar sección de reporte en formato Markdown para fusión en Dredd."),
-    flags: Optional[str] = typer.Option(None, "--flags", help="Banderas adicionales para GCC separadas por espacio."),
+    flags: Optional[str] = typer.Option(None, "--flags", help="Banderas adicionales para el compilador separadas por espacio."),
+    compiler: Optional[str] = typer.Option(None, "--compiler", "--cc", help="Compilador backend a utilizar: 'gcc' o 'clang'."),
 ) -> None:
     """Compila código C con banderas estrictas de cátedra y traduce errores a español didáctico."""
     extra_flags = flags.split() if flags else None
-    resultado = compilar_archivos(fuentes, binario_salida=output, flags_adicionales=extra_flags)
+    resultado = compilar_archivos(fuentes, binario_salida=output, flags_adicionales=extra_flags, compilador=compiler)
+
+    # Registrar en historial de errores
+    if resultado.diagnosticos:
+        registrar_diagnosticos(resultado.diagnosticos, fuentes)
 
     if output_md:
         md_text = generar_seccion_markdown(resultado)
@@ -125,10 +134,11 @@ def report_cmd(
     fuentes: List[Path] = typer.Argument(..., help="Archivos fuentes .c a compilar y auditar."),
     output: Optional[Path] = typer.Option(None, "--output", "-o", help="Ruta de destino del archivo Markdown."),
     flags: Optional[str] = typer.Option(None, "--flags", help="Banderas adicionales para GCC."),
+    compiler: Optional[str] = typer.Option(None, "--compiler", "--cc", help="Compilador backend ('gcc' o 'clang')."),
 ) -> None:
     """Genera directamente la sección de reporte Markdown de DAEDALUS para Dredd."""
     extra_flags = flags.split() if flags else None
-    resultado = compilar_archivos(fuentes, flags_adicionales=extra_flags)
+    resultado = compilar_archivos(fuentes, flags_adicionales=extra_flags, compilador=compiler)
     md_content = generar_seccion_markdown(resultado)
     if output:
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -190,7 +200,6 @@ def preprocess_cmd(
         console.print(f"[bold red]Error en preprocesador:[/bold red]\n{res.stderr}")
         raise typer.Exit(code=1)
 
-    # Filtrar líneas vacías redundantes
     lineas = [l for l in res.stdout.splitlines() if l.strip()]
     contenido = "\n".join(lineas)
 
@@ -232,7 +241,6 @@ def compile_commands_cmd(
     output: Path = typer.Option(Path("compile_commands.json"), "--output", "-o", help="Ruta de destino del archivo JSON."),
 ) -> None:
     """Genera compile_commands.json para Language Servers (Clangd / VS Code / Neovim)."""
-    import json
     entries = []
     cwd = str(Path.cwd().resolve())
 
@@ -249,10 +257,139 @@ def compile_commands_cmd(
     console.print(f"[bold green]✓ compile_commands.json generado exitosamente con {len(entries)} archivos en:[/bold green] [cyan]{output}[/cyan]")
 
 
+@app.command("expand-macro")
+def expand_macro_cmd(
+    fuente: Path = typer.Argument(..., help="Archivo C con definiciones o usos de macros."),
+    macro: Optional[str] = typer.Option(None, "--macro", "-m", help="Nombre de la macro a expandir e inspeccionar."),
+    compiler: Optional[str] = typer.Option(None, "--compiler", "--cc", help="Compilador a utilizar."),
+) -> None:
+    """Expande y desglosa macros anidadas paso a paso para traducir errores complejos."""
+    res = expandir_macro(fuente, nombre_macro=macro, compilador=compiler)
+    if "error" in res:
+        console.print(f"[bold red]❌ {res['error']}[/bold red]")
+        raise typer.Exit(code=1)
+
+    console.print(Panel(
+        f"Total de macros detectadas: [bold cyan]{res.get('total_macros', '0')}[/bold cyan]\n\n"
+        + (f"[bold yellow]Macro solicitada:[/bold yellow] {res.get('macro_seleccionada', '')}\n\n" if macro else "")
+        + f"[dim]Código expandido:[/dim]\n{res.get('codigo_expandido', '')[:500]}...",
+        title="🔍 Expansor de Macros Pedagógico",
+        border_style="cyan",
+    ))
+
+
+@app.command("stats")
+@app.command("history")
+def stats_cmd(
+    json_output: bool = typer.Option(False, "--json", help="Emitir estadísticas en JSON."),
+) -> None:
+    """Muestra el historial y estadísticas de errores frecuentes del estudiante."""
+    datos = obtener_estadisticas()
+    if json_output:
+        print(json.dumps(datos, indent=2, ensure_ascii=False))
+        raise typer.Exit(code=0)
+
+    tabla = Table(title="📊 Estadísticas de Errores de Compilación (Daedalus)")
+    tabla.add_column("Diagnóstico / Error Frecuente", style="bold red")
+    tabla.add_column("Ocurrencias", justify="right", style="cyan")
+
+    for tit, count in datos.get("frecuencia_errores", {}).items():
+        tabla.add_row(tit, str(count))
+
+    if not datos.get("frecuencia_errores"):
+        console.print("[green]No hay errores registrados en el historial local aún.[/green]")
+    else:
+        console.print(f"Total de sesiones registradas: [bold cyan]{datos['total_sesiones']}[/bold cyan] (Errores totales: [bold]{datos['total_diagnosticos']}[/bold])")
+        console.print(tabla)
+
+
+@app.command("check-flags")
+@app.command("suggest-flags")
+def check_flags_cmd(
+    makefile: Optional[Path] = typer.Option(None, "--makefile", "-m", help="Ruta al Makefile a inspeccionar."),
+    flags: Optional[str] = typer.Option(None, "--flags", "-f", help="Lista de flags actuales separados por espacio."),
+    json_output: bool = typer.Option(False, "--json", help="Emitir resultado en JSON."),
+) -> None:
+    """Audita las banderas de compilación y sugiere flags pedagógicos obligatorios faltantes."""
+    lista_flags = flags.split() if flags else None
+    res = sugerir_flags_pedagogicos(flags_actuales=lista_flags, makefile_path=makefile)
+
+    if json_output:
+        print(json.dumps(res, indent=2, ensure_ascii=False))
+        raise typer.Exit(code=0 if res["cumple_estricto"] else 1)
+
+    if res["cumple_estricto"]:
+        console.print("[bold green]✓ Configuración de flags óptima: Cumple con todos los estándares estrictos de cátedra.[/bold green]")
+        raise typer.Exit(code=0)
+
+    console.print("[bold yellow]⚠️ Se detectaron flags pedagógicos recomendados faltantes:[/bold yellow]\n")
+    tabla = Table(title="Banderas Faltantes de Cátedra")
+    tabla.add_column("Flag", style="bold red")
+    tabla.add_column("Motivo Pedagógico", style="dim")
+
+    for f, motivo in res.get("explicaciones", {}).items():
+        tabla.add_row(f, motivo)
+
+    console.print(tabla)
+    raise typer.Exit(code=1)
+
+
+@app.command("check-standards")
+def check_standards_cmd(
+    fuente: Path = typer.Argument(..., help="Archivo C a validar contra múltiples estándares."),
+    json_output: bool = typer.Option(False, "--json", help="Salida en JSON."),
+) -> None:
+    """Verifica la compatibilidad del código simultáneamente contra C99, C11, C17 y C2x/C23."""
+    res = verificar_compatibilidad_estandares(fuente)
+
+    if json_output:
+        print(json.dumps(res, indent=2, ensure_ascii=False))
+        raise typer.Exit(code=0)
+
+    tabla = Table(title=f"Matriz de Compatibilidad Multi-Estándar ({fuente.name})")
+    tabla.add_column("Estándar", style="bold cyan")
+    tabla.add_column("Veredicto", justify="center")
+    tabla.add_column("Detalle")
+
+    for std, val in res.items():
+        if std == "error":
+            console.print(f"[bold red]❌ {val['mensaje']}[/bold red]")
+            raise typer.Exit(code=1)
+        estado = "[green]✓ Compatible[/green]" if val["valido"] else "[red]✗ Incompatible[/red]"
+        detalle = "Sin errores sintácticos" if val["valido"] else (val["errores"].splitlines()[0] if val["errores"] else "Error")
+        tabla.add_row(std.upper(), estado, detalle)
+
+    console.print(tabla)
+
+
+@app.command("check-deps")
+def check_deps_cmd(
+    rutas: List[Path] = typer.Argument(..., help="Directorios o archivos C/H a auditar."),
+    json_output: bool = typer.Option(False, "--json", help="Salida en JSON."),
+) -> None:
+    """Construye el grafo de inclusiones y detecta dependencias circulares entre cabeceras."""
+    grafo = construir_grafo_dependencias(rutas)
+    ciclos = detectar_dependencias_circulares(grafo)
+
+    if json_output:
+        print(json.dumps({"grafo": grafo, "ciclos": ciclos, "tiene_ciclos": len(ciclos) > 0}, indent=2, ensure_ascii=False))
+        raise typer.Exit(code=1 if ciclos else 0)
+
+    if not ciclos:
+        console.print(f"[bold green]✓ Grafo de inclusiones limpio ({len(grafo)} módulos analizados): Sin dependencias circulares.[/bold green]")
+        raise typer.Exit(code=0)
+
+    console.print(f"[bold red]❌ Se detectaron {len(ciclos)} ciclos de inclusión circular:[/bold red]\n")
+    for idx, c in enumerate(ciclos, 1):
+        cadena = " -> ".join(c)
+        console.print(f"  [red]{idx}.[/red] [yellow]{cadena}[/yellow]")
+
+    raise typer.Exit(code=1)
+
+
 def main() -> None:
     app()
 
 
 if __name__ == "__main__":
     main()
-
