@@ -53,7 +53,10 @@ def main_callback(
 
 def generar_seccion_markdown(resultado) -> str:
     """Genera sección de compilación y diagnósticos pedagógicos para Dredd."""
-    lines = ["## Compilación y Diagnósticos (Daedalus)\n"]
+    lines = [
+        "<!-- dredd-section: daedalus v1.0.0 -->\n",
+        "## Compilación y Diagnósticos (Daedalus)\n",
+    ]
     estado = "✓ Compilación Exitosa" if resultado.exito else "❌ Falló Compilación"
     lines.append(f"- **Estado:** {estado}")
     if resultado.binario:
@@ -69,7 +72,10 @@ def generar_seccion_markdown(resultado) -> str:
         for d in resultado.diagnosticos:
             loc = f"`{d.archivo}:{d.linea}:{d.columna}`" if d.linea else (f"`{d.archivo}`" if d.archivo else "Compilador")
             sev_badge = "❌ ERROR" if d.severidad == "error" else "⚠️ ADVERTENCIA"
-            lines.append(f"| {sev_badge} | {loc} | **{d.titulo}** | {d.explicacion} | {d.sugerencia} |")
+            tit_limpio = d.titulo.replace("|", "&#124;")
+            exp_limpio = d.explicacion.replace("|", "&#124;")
+            sug_limpio = d.sugerencia.replace("|", "&#124;")
+            lines.append(f"| {sev_badge} | {loc} | **{tit_limpio}** | {exp_limpio} | {sug_limpio} |")
         lines.append("")
     return "\n".join(lines)
 

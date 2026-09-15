@@ -44,6 +44,7 @@ class ResultadoCompilacion:
 
     def to_dict(self) -> Dict[str, Any]:
         return {
+            "schema_version": "1.0.0",
             "exito": self.exito,
             "codigo_retorno": self.codigo_retorno,
             "binario": str(self.binario) if self.binario else None,
