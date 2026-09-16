@@ -80,8 +80,18 @@ _GCC_LINE_RE = re.compile(
 )
 
 
-def traducir_linea_diagnostico(mensaje: str) -> Tuple[str, str, str]:
-    """Traduce un mensaje de compilador a título, explicación y sugerencia didáctica."""
+from daedalus.core.diagnostic_catalog import lookup_explanation
+
+
+def traducir_linea_diagnostico_completo(
+    mensaje: str,
+) -> Tuple[str, str, str, Optional[str], Optional[str], Optional[str], List[str]]:
+    """Traduce un mensaje de compilador retornando:
+    (titulo, explicacion, sugerencia, flag, causa_raiz, cita_iso_c, flags_sugeridos)
+    """
+    cat_title, cat_expl, cat_cause, cat_sugg, cat_flag, cat_cit, cat_flags = lookup_explanation(mensaje)
+    has_catalog_match = cat_title != "Diagnóstico de Compilación GCC"
+
     for pattern, tit_tpl, exp_tpl, sug_tpl in REGLAS_TRADUCCION:
         m = re.search(pattern, mensaje, re.IGNORECASE)
         if m:
@@ -89,10 +99,43 @@ def traducir_linea_diagnostico(mensaje: str) -> Tuple[str, str, str]:
             titulo = tit_tpl.format(**groups) if groups else tit_tpl
             explicacion = exp_tpl.format(**groups) if groups else exp_tpl
             sugerencia = sug_tpl.format(**groups) if groups else sug_tpl
-            return titulo, explicacion, sugerencia
+            return (
+                titulo,
+                explicacion,
+                sugerencia,
+                cat_flag,
+                cat_cause if has_catalog_match else None,
+                cat_cit,
+                cat_flags,
+            )
+
+    if has_catalog_match:
+        return (
+            cat_title,
+            cat_expl,
+            cat_sugg,
+            cat_flag,
+            cat_cause,
+            cat_cit,
+            cat_flags,
+        )
 
     # Fallback genérico
-    return "Diagnóstico del compilador", mensaje, "Revisá la línea indicada y la sintaxis estándar de C11."
+    return (
+        "Diagnóstico del compilador",
+        mensaje,
+        "Revisá la línea indicada y la sintaxis estándar de C11.",
+        None,
+        None,
+        None,
+        [],
+    )
+
+
+def traducir_linea_diagnostico(mensaje: str) -> Tuple[str, str, str]:
+    """Traduce un mensaje de compilador a título, explicación y sugerencia didáctica."""
+    tit, exp, sug, _, _, _, _ = traducir_linea_diagnostico_completo(mensaje)
+    return tit, exp, sug
 
 
 def parsear_stderr_compilador(stderr: str) -> List[DiagnosticoCompilacion]:
@@ -110,7 +153,7 @@ def parsear_stderr_compilador(stderr: str) -> List[DiagnosticoCompilacion]:
             kind = m.group("kind").lower()
             msg = m.group("msg").strip()
 
-            tit, exp, sug = traducir_linea_diagnostico(msg)
+            tit, exp, sug, flag, cause, cit, flags_sugg = traducir_linea_diagnostico_completo(msg)
             diagnosticos.append(DiagnosticoCompilacion(
                 archivo=f,
                 linea=lin,
@@ -120,6 +163,10 @@ def parsear_stderr_compilador(stderr: str) -> List[DiagnosticoCompilacion]:
                 titulo=tit,
                 explicacion=exp,
                 sugerencia=sug,
+                flag=flag,
+                causa_raiz=cause,
+                cita_iso_c=cit,
+                flags_sugeridos=flags_sugg,
             ))
 
     return diagnosticos

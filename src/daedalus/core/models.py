@@ -18,9 +18,14 @@ class DiagnosticoCompilacion:
     titulo: str
     explicacion: str
     sugerencia: str
+    flag: Optional[str] = None
+    causa_raiz: Optional[str] = None
+    cita_iso_c: Optional[str] = None
+    flags_sugeridos: List[str] = field(default_factory=list)
+    code_snippet: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        d: Dict[str, Any] = {
             "archivo": self.archivo,
             "linea": self.linea,
             "columna": self.columna,
@@ -30,6 +35,20 @@ class DiagnosticoCompilacion:
             "explicacion": self.explicacion,
             "sugerencia": self.sugerencia,
         }
+        if self.flag:
+            d["flag"] = self.flag
+        if self.causa_raiz:
+            d["causa_raiz"] = self.causa_raiz
+            d["root_cause_es"] = self.causa_raiz
+        if self.cita_iso_c:
+            d["cita_iso_c"] = self.cita_iso_c
+            d["iso_c_citation"] = self.cita_iso_c
+        if self.flags_sugeridos:
+            d["flags_sugeridos"] = self.flags_sugeridos
+            d["suggested_flags"] = self.flags_sugeridos
+        if self.code_snippet:
+            d["code_snippet"] = self.code_snippet
+        return d
 
 
 @dataclass

@@ -13,11 +13,15 @@ from rich.panel import Panel
 from rich.table import Table
 
 from daedalus import __version__
+from daedalus.core.arch_check import check_arch_incompatibilities
 from daedalus.core.compiler import compilar_archivos
 from daedalus.core.deps import construir_grafo_dependencias, detectar_dependencias_circulares
+from daedalus.core.diagnostic_catalog import list_catalog_entries
+from daedalus.core.guide_generator import generate_resolution_guide
 from daedalus.core.macro_explainer import expandir_macro
 from daedalus.core.standards import sugerir_flags_pedagogicos, verificar_compatibilidad_estandares
 from daedalus.core.stats import obtener_estadisticas, registrar_diagnosticos
+from daedalus.core.suggest_flags import analyze_missing_flags
 from daedalus.core.translator import parsear_stderr_compilador
 
 console = Console()
@@ -88,6 +92,7 @@ def compile_cmd(
     output_md: Optional[Path] = typer.Option(None, "--md", "--output-md", help="Generar sección de reporte en formato Markdown para fusión en Dredd."),
     flags: Optional[str] = typer.Option(None, "--flags", help="Banderas adicionales para el compilador separadas por espacio."),
     compiler: Optional[str] = typer.Option(None, "--compiler", "--cc", help="Compilador backend a utilizar: 'gcc' o 'clang'."),
+    guide: bool = typer.Option(False, "--guide", help="Generar guía detallada paso a paso en Markdown."),
 ) -> None:
     """Compila código C con banderas estrictas de cátedra y traduce errores a español didáctico."""
     extra_flags = flags.split() if flags else None
@@ -96,6 +101,11 @@ def compile_cmd(
     # Registrar en historial de errores
     if resultado.diagnosticos:
         registrar_diagnosticos(resultado.diagnosticos, fuentes)
+
+    if guide:
+        guide_text = generate_resolution_guide(resultado)
+        console.print(guide_text)
+        raise typer.Exit(code=0 if resultado.exito else 1)
 
     if output_md:
         md_text = generar_seccion_markdown(resultado)
@@ -310,7 +320,6 @@ def stats_cmd(
 
 
 @app.command("check-flags")
-@app.command("suggest-flags")
 def check_flags_cmd(
     makefile: Optional[Path] = typer.Option(None, "--makefile", "-m", help="Ruta al Makefile a inspeccionar."),
     flags: Optional[str] = typer.Option(None, "--flags", "-f", help="Lista de flags actuales separados por espacio."),
@@ -338,6 +347,111 @@ def check_flags_cmd(
 
     console.print(tabla)
     raise typer.Exit(code=1)
+
+
+@app.command("suggest-flags")
+def suggest_flags_cmd(
+    fuente_o_log: Optional[Path] = typer.Argument(None, help="Archivo fuente C o log de compilación a analizar."),
+    makefile: Optional[Path] = typer.Option(None, "--makefile", "-m", help="Ruta al Makefile a inspeccionar."),
+    flags: Optional[str] = typer.Option(None, "--flags", "-f", help="Lista de flags actuales separados por espacio."),
+    json_output: bool = typer.Option(False, "--json", help="Emitir resultado en JSON."),
+) -> None:
+    """Analiza un archivo fuente, log de errores o Makefile y sugiere flags de compilación/enlazado faltantes."""
+    if fuente_o_log and fuente_o_log.exists():
+        content = fuente_o_log.read_text(encoding="utf-8", errors="replace")
+        diagnostics = parsear_stderr_compilador(content)
+        suggestions = analyze_missing_flags(content, diagnostics)
+
+        if json_output:
+            print(json.dumps(suggestions, indent=2, ensure_ascii=False))
+            return
+
+        if not suggestions:
+            console.print("[bold green]✓ No se detectaron flags faltantes de enlazado o bibliotecas estándar.[/bold green]")
+            return
+
+        table = Table(title="Sugerencias de Flags de Compilación y Enlazado", show_header=True, header_style="bold cyan")
+        table.add_column("Flag Sugerido", style="bold yellow")
+        table.add_column("Motivo", style="white")
+        table.add_column("Instrucción de Remediación", style="green")
+
+        for s in suggestions:
+            table.add_row(s["flag"], s["reason"], s["fix"])
+
+        console.print(table)
+        return
+
+    check_flags_cmd(makefile=makefile, flags=flags, json_output=json_output)
+
+
+@app.command("catalog")
+@app.command("list-warnings")
+def catalog_cmd(
+    json_output: bool = typer.Option(False, "--json", help="Emitir salida en formato JSON."),
+) -> None:
+    """Lista todas las advertencias y reglas pedagógicas documentadas en el catálogo de diagnósticos."""
+    entries = list_catalog_entries()
+    if json_output:
+        print(json.dumps(entries, indent=2, ensure_ascii=False))
+        return
+
+    tabla = Table(title="Catálogo de Advertencias y Diagnósticos de GCC/Clang", show_header=True, header_style="bold magenta")
+    tabla.add_column("Flag / Concepto", style="cyan")
+    tabla.add_column("Diagnóstico en Español", style="bold white")
+    tabla.add_column("Norma ISO C", style="italic yellow")
+
+    for e in entries:
+        flag_s = e["flag"] or e["key"]
+        norma_s = e["citation"] or "-"
+        tabla.add_row(flag_s, e["title"], norma_s)
+
+    console.print(tabla)
+
+
+@app.command("guide")
+def guide_cmd(
+    fuente: Path = typer.Argument(..., help="Archivo C a compilar y generar guía.", exists=True),
+    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Guardar la guía en un archivo Markdown."),
+    flags: Optional[str] = typer.Option(None, "--flags", help="Banderas adicionales para el compilador separadas por espacio."),
+) -> None:
+    """Genera una guía interactiva de resolución paso a paso en Markdown para el archivo C indicado."""
+    extra_flags = flags.split() if flags else None
+    resultado = compilar_archivos([fuente], flags_adicionales=extra_flags)
+    guide_text = generate_resolution_guide(resultado)
+    if output:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(guide_text, encoding="utf-8")
+        console.print(f"[bold green]✓ Guía Markdown generada en:[/bold green] {output}")
+    else:
+        console.print(guide_text)
+    raise typer.Exit(code=0 if resultado.exito else 1)
+
+
+@app.command("check-arch")
+def check_arch_cmd(
+    log_file: Path = typer.Argument(..., help="Archivo con la salida de compilador a auditar.", exists=True),
+    json_output: bool = typer.Option(False, "--json", help="Emitir salida en formato JSON."),
+) -> None:
+    """Audita advertencias relacionadas con incompatibilidades de tamaño en 32 vs 64 bits."""
+    raw_text = log_file.read_text(encoding="utf-8", errors="replace")
+    findings = check_arch_incompatibilities(raw_text)
+
+    if json_output:
+        print(json.dumps(findings, indent=2, ensure_ascii=False))
+        return
+
+    if not findings:
+        console.print("[bold green]✓ No se detectaron riesgos de portabilidad 32 vs 64 bits en el log analizado.[/bold green]")
+        return
+
+    for f in findings:
+        console.print(Panel(
+            f"[bold red]🚨 {f['title']}[/bold red]\n\n"
+            f"[bold]Explicación:[/bold] {f['explanation']}\n\n"
+            f"[bold yellow]Causa Raíz:[/bold yellow] {f['root_cause']}\n\n"
+            f"[bold green]↳ Remediación:[/bold green] {f['suggestion']}",
+            title="[bold red]Incompatibilidad 32/64 bits[/bold red]"
+        ))
 
 
 @app.command("check-standards")
