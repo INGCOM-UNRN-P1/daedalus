@@ -31,8 +31,7 @@ def compilar_archivos(
     compilador: Optional[str] = None,
     timeout: int = 10,
 ) -> ResultadoCompilacion:
-    """Compila una lista de archivos fuente C aplicando flags estrictos y traduciendo errores."""
-    cc = compilador or shutil.which("gcc") or shutil.which("clang") or "gcc"
+    cc = compilador or "gcc"
 
     # Validar existencia de archivos
     for f in fuentes:
