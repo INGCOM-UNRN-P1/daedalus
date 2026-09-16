@@ -43,7 +43,11 @@ def compilar_archivos(
                 stderr_crudo=f"El archivo fuente '{f}' no existe.",
             )
 
-    out_file = binario_salida or Path(tempfile.mktemp(prefix="daedalus_bin_"))
+    if binario_salida:
+        out_file = binario_salida
+    else:
+        with tempfile.NamedTemporaryFile(prefix="daedalus_bin_", delete=False) as tf:
+            out_file = Path(tf.name)
 
     cmd = [cc] + FLAGS_CATEDRA_DEFAULT
     if flags_adicionales:
