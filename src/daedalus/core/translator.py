@@ -83,12 +83,27 @@ _GCC_LINE_RE = re.compile(
 from daedalus.core.diagnostic_catalog import lookup_explanation
 
 
+# GCC y Clang en locale UTF-8 citan los identificadores con comillas
+# tipográficas (‘foo’), no con apóstrofos ASCII. Las reglas de traducción se
+# escribieron con ASCII, así que sin normalizar no matcheaban justo los
+# diagnósticos más frecuentes (no declarado, declaración implícita, tipos
+# contradictorios, punteros incompatibles) y el alumno recibía el mensaje
+# crudo en inglés. El linker sigue usando `nombre', que se deja intacto.
+_COMILLAS_TIPOGRAFICAS = str.maketrans({"\u2018": "'", "\u2019": "'"})
+
+
+def normalizar_comillas(mensaje: str) -> str:
+    """Convierte las comillas tipográficas del compilador a apóstrofos ASCII."""
+    return mensaje.translate(_COMILLAS_TIPOGRAFICAS)
+
+
 def traducir_linea_diagnostico_completo(
     mensaje: str,
 ) -> Tuple[str, str, str, Optional[str], Optional[str], Optional[str], List[str]]:
     """Traduce un mensaje de compilador retornando:
     (titulo, explicacion, sugerencia, flag, causa_raiz, cita_iso_c, flags_sugeridos)
     """
+    mensaje = normalizar_comillas(mensaje)
     cat_title, cat_expl, cat_cause, cat_sugg, cat_flag, cat_cit, cat_flags = lookup_explanation(mensaje)
     has_catalog_match = cat_title != "Diagnóstico de Compilación GCC"
 
