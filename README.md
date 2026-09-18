@@ -48,3 +48,25 @@ daedalus translate stderr.log
 # 4. Comprobar salud del toolchain (gcc, clang, ld, gdb)
 daedalus doctor
 ```
+
+
+## 📚 Referencia de comandos
+
+| Comando | Para qué sirve |
+| :--- | :--- |
+| `compile FUENTES... [-o BIN] [--json] [--md ARCHIVO] [--flags ...] [--cc gcc\|clang] [--guide]` | Compila con las banderas estrictas de cátedra y traduce los diagnósticos a español. |
+| `report FUENTES... [-o ARCHIVO]` | Compila y genera la sección Markdown para Dredd. |
+| `translate [LOG] [--json]` | Traduce un log de compilador (archivo o stdin) sin compilar. |
+| `doctor` | Verifica el toolchain: GCC, Clang, Make, GDB, ld. |
+| `preprocess FUENTE [-o ARCHIVO]` | Corre `gcc -E` y limpia comentarios y directivas del sistema. |
+| `explain-opt [NIVEL]` | Explica qué hace cada nivel de optimización (`-O0`…`-O3`, `-Os`). |
+| `compile-commands FUENTES... [-o ARCHIVO]` | Genera `compile_commands.json` para clangd / VS Code / Neovim. |
+| `expand-macro FUENTE -m MACRO` | Expande una macro anidada paso a paso. |
+| `history` / `stats` | Historial y estadísticas de los errores más frecuentes del estudiante (son el mismo comando). |
+| `check-flags [-m MAKEFILE] [-f FLAGS]` | Audita banderas de compilación y marca las obligatorias que faltan. |
+| `suggest-flags [FUENTE_O_LOG] [-m MAKEFILE]` | Sugiere flags de compilación/enlazado a partir de un fuente, un log o un Makefile. |
+| `list-warnings` / `catalog` | Lista el catálogo de advertencias documentadas (son el mismo comando). |
+| `guide FUENTE [-o ARCHIVO]` | Guía de resolución paso a paso en Markdown. |
+| `check-arch LOG` | Detecta advertencias de tamaño que cambian entre 32 y 64 bits. |
+| `check-standards FUENTE` | Compara la compatibilidad con C99, C11, C17 y C2x/C23. |
+| `check-deps RUTAS...` | Grafo de inclusiones y dependencias circulares entre cabeceras. |
