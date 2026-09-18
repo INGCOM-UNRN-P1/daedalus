@@ -53,3 +53,32 @@ def test_el_backtick_del_linker_se_respeta():
 
 def test_normalizar_no_toca_el_resto_del_mensaje():
     assert normalizar_comillas("dice ‘hola’ y nada más") == "dice 'hola' y nada más"
+
+
+def test_no_regresion_contra_gcc_real(tmp_path):
+    """Traduce la salida real del GCC del entorno, no un stderr sintético.
+
+    Los tests del traductor usaban stderr escrito a mano con comillas ASCII,
+    que es justamente lo que enmascaraba DAEDALUS-D0301: contra el GCC
+    instalado (que cita con ‘...’) las reglas no matcheaban.
+    """
+    import shutil
+    import subprocess
+
+    if not shutil.which("gcc"):
+        pytest.skip("requiere gcc en el entorno")
+
+    fuente = tmp_path / "roto.c"
+    fuente.write_text("int main(void){ foo(); return 0; }\n", encoding="utf-8")
+    proc = subprocess.run(
+        ["gcc", "-std=c11", "-Wall", "-Wextra", "-c", str(fuente), "-o", "/dev/null"],
+        capture_output=True,
+        text=True,
+    )
+
+    lineas = [l for l in proc.stderr.splitlines() if "implicit declaration" in l]
+    assert lineas, f"el gcc del entorno no emitió el diagnóstico esperado: {proc.stderr[:200]}"
+
+    titulo = traducir_linea_diagnostico_completo(lineas[0])[0]
+    assert titulo != GENERICO, f"no se tradujo la salida real de gcc: {lineas[0]}"
+    assert "foo" in titulo

@@ -45,7 +45,8 @@ daedalus = "daedalus.cli:main"
 [project.entry-points."ripley.plugins"]
 compiler = "daedalus.ripley_plugin:DaedalusPlugin"
 
-[project.optional-dependencies]
+[dependency-groups]
+# PEP 735: uv lo instala con `uv sync` a secas.
 dev = [
     "pytest>=7.4.0",
 ]
