@@ -30,6 +30,7 @@ def ejecutar_diagnostico_doctor(console: Optional[Console] = None) -> bool:
         ("clang", "Compilador LLVM alternativo con diagnósticos ricos", False, "sudo apt install clang"),
         ("make", "Gestor de construcción para Makefiles institucionales", True, "sudo apt install make"),
         ("gdb", "Depurador interactivo de GNU", False, "sudo apt install gdb"),
+        ("ld", "Enlazador GNU (los errores de enlace se traducen con él)", True, "sudo apt install binutils"),
     ]
     
     tabla = Table(title="🏥 Diagnóstico de Compiladores (Daedalus doctor)", border_style="cyan")

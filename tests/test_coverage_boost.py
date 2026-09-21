@@ -95,3 +95,16 @@ def test_diagram_pointer_visualizer():
     assert "Visualizador de Indirección" in diag
     assert "Sobra un operador" in diag
 
+
+
+def test_doctor_chequea_ld(monkeypatch):
+    """DAEDALUS-D0401: doctor debe sondear `ld` (lo prometen el docstring y el README)."""
+    from daedalus.core import doctor
+
+    sondeadas = []
+    monkeypatch.setattr(
+        doctor, "chequear_herramienta",
+        lambda cmd, args_version="--version": sondeadas.append(cmd) or {"disponible": True, "version": "x", "ruta": "/x"},
+    )
+    assert doctor.ejecutar_diagnostico_doctor() is True
+    assert "ld" in sondeadas
