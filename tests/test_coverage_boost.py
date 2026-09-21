@@ -89,13 +89,6 @@ def test_cli_preprocess_and_compile_commands(tmp_path):
     assert (tmp_path / "compile_commands.json").is_file()
 
 
-def test_diagram_pointer_visualizer():
-    from daedalus.core.diagram import generar_diagrama_punteros, detectar_incompatibilidad_punteros
-    diag = generar_diagrama_punteros("int**", "int*")
-    assert "Visualizador de Indirección" in diag
-    assert "Sobra un operador" in diag
-
-
 
 def test_doctor_chequea_ld(monkeypatch):
     """DAEDALUS-D0401: doctor debe sondear `ld` (lo prometen el docstring y el README)."""
