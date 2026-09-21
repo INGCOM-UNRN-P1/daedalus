@@ -109,3 +109,13 @@ def test_version_del_plugin_sale_de_una_sola_fuente():
     from daedalus.ripley_plugin import DaedalusPlugin
 
     assert DaedalusPlugin.version == daedalus.__version__
+
+
+def test_catalogo_matchea_comillas_ascii_y_tipograficas():
+    """ESPER-D0301: las claves con comillas tipográficas no deben perder el match con ASCII (Clang / locale C)."""
+    from daedalus.core.diagnostic_catalog import lookup_explanation
+
+    tip = lookup_explanation("format ‘%d’ expects argument of type ‘int’, but argument 2 has type ‘long int’")
+    asc = lookup_explanation("format '%d' expects argument of type 'int', but argument 2 has type 'long int'")
+    assert tip == asc
+    assert tip[4] == "-Wformat"

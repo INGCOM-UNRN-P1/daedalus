@@ -278,16 +278,21 @@ CATALOGO_GCC: Dict[str, Tuple[str, str, str, str, Optional[str], List[str]]] = {
 }
 
 
+def _normalizar_comillas(texto: str) -> str:
+    """GCC emite comillas tipográficas (‘x’) según el locale; Clang y GCC en C usan ASCII."""
+    return texto.replace("‘", "'").replace("’", "'").replace("“", '"').replace("”", '"')
+
+
 def lookup_explanation(raw_msg: str) -> Tuple[str, str, str, str, Optional[str], Optional[str], List[str]]:
     """Busca la explicación más adecuada para un mensaje de error o warning de GCC.
     
     Retorna: (title_es, explanation_es, root_cause_es, suggestion_es, flag, standard_citation, suggested_flags)
     """
-    lower_msg = raw_msg.lower()
+    lower_msg = _normalizar_comillas(raw_msg).lower()
     
     # 1. Búsqueda por subcadena en catálogo
     for key, (title, expl, cause, sugg, flag, flags_sugg) in CATALOGO_GCC.items():
-        if key in lower_msg:
+        if _normalizar_comillas(key) in lower_msg:
             # Buscar cita del estándar si hay flag asociado
             citation = get_standard_citation(flag or key)
             return title, expl, cause, sugg, flag, citation, flags_sugg
