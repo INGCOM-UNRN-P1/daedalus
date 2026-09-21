@@ -108,3 +108,11 @@ def test_doctor_chequea_ld(monkeypatch):
     )
     assert doctor.ejecutar_diagnostico_doctor() is True
     assert "ld" in sondeadas
+
+
+def test_version_del_plugin_sale_de_una_sola_fuente():
+    """DAEDALUS-D0102: el plugin no duplica la versión del paquete."""
+    import daedalus
+    from daedalus.ripley_plugin import DaedalusPlugin
+
+    assert DaedalusPlugin.version == daedalus.__version__
