@@ -58,8 +58,9 @@ def main_callback(
 
 def generar_seccion_markdown(resultado) -> str:
     """Genera sección de compilación y diagnósticos pedagógicos para Dredd."""
+    status = "ok" if resultado.exito else "fail"
     lines = [
-        "<!-- dredd-section: daedalus v1.0.0 -->\n",
+        f"<!-- dredd-section: daedalus, tool=daedalus, version=1.0.0, status={status} -->\n",
         "## Compilación y Diagnósticos (Daedalus)\n",
     ]
     estado = "✓ Compilación Exitosa" if resultado.exito else "❌ Falló Compilación"
