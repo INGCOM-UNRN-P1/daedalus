@@ -17,6 +17,7 @@ from daedalus.core.arch_check import check_arch_incompatibilities
 from daedalus.core.compiler import compilar_archivos
 from daedalus.core.deps import construir_grafo_dependencias, detectar_dependencias_circulares
 from daedalus.core.diagnostic_catalog import list_catalog_entries
+from daedalus.core.filter import filter_and_deduplicate
 from daedalus.core.guide_generator import generate_resolution_guide
 from daedalus.core.macro_explainer import expandir_macro
 from daedalus.core.standards import sugerir_flags_pedagogicos, verificar_compatibilidad_estandares
@@ -93,10 +94,14 @@ def compile_cmd(
     flags: Optional[str] = typer.Option(None, "--flags", help="Banderas adicionales para el compilador separadas por espacio."),
     compiler: Optional[str] = typer.Option(None, "--compiler", "--cc", help="Compilador backend a utilizar: 'gcc' o 'clang'."),
     guide: bool = typer.Option(False, "--guide", help="Generar guía detallada paso a paso en Markdown."),
+    dedup: bool = typer.Option(False, "--dedup", help="Suprimir advertencias repetitivas o en cascada."),
 ) -> None:
     """Compila código C con banderas estrictas de cátedra y traduce errores a español didáctico."""
     extra_flags = flags.split() if flags else None
     resultado = compilar_archivos(fuentes, binario_salida=output, flags_adicionales=extra_flags, compilador=compiler)
+
+    if dedup and resultado.diagnosticos:
+        resultado.diagnosticos, resultado.suprimidos = filter_and_deduplicate(resultado.diagnosticos)
 
     # Registrar en historial de errores
     if resultado.diagnosticos:
@@ -142,6 +147,9 @@ def compile_cmd(
         )
         console.print(Panel(cuerpo, title=f"[{color}][bold]{d.severidad.upper()}: {d.titulo}[/bold][/{color}]", border_style=color))
 
+    if resultado.suprimidos > 0:
+        console.print(f"[dim]ℹ Se suprimieron {resultado.suprimidos} advertencias repetitivas o en cascada para mayor claridad.[/dim]")
+
     raise typer.Exit(code=1)
 
 
@@ -168,6 +176,7 @@ def report_cmd(
 def translate_cmd(
     stderr_file: Optional[Path] = typer.Argument(None, help="Archivo con stderr crudo o leer desde stdin."),
     json_output: bool = typer.Option(False, "--json", help="Salida en JSON."),
+    dedup: bool = typer.Option(False, "--dedup", help="Suprimir advertencias repetitivas o en cascada."),
 ) -> None:
     """Traduce un bloque de texto o log de compilador a diagnósticos didácticos."""
     if stderr_file and stderr_file.is_file():
@@ -177,9 +186,13 @@ def translate_cmd(
         texto = sys.stdin.read()
 
     diagnosticos = parsear_stderr_compilador(texto)
+    suprimidos = 0
+    if dedup and diagnosticos:
+        diagnosticos, suprimidos = filter_and_deduplicate(diagnosticos)
 
     if json_output:
-        print(json.dumps([d.to_dict() for d in diagnosticos], indent=2, ensure_ascii=False))
+        res_data = [d.to_dict() for d in diagnosticos]
+        print(json.dumps(res_data, indent=2, ensure_ascii=False))
         raise typer.Exit(code=0)
 
     if not diagnosticos:
@@ -188,6 +201,9 @@ def translate_cmd(
 
     for d in diagnosticos:
         console.print(f"[bold red]• {d.titulo}[/bold red] ({d.archivo}:{d.linea}): {d.explicacion}")
+
+    if suprimidos > 0:
+        console.print(f"[dim]ℹ Se suprimieron {suprimidos} advertencias repetitivas o en cascada para mayor claridad.[/dim]")
 
 
 @app.command("doctor")

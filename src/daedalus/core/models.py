@@ -60,9 +60,10 @@ class ResultadoCompilacion:
     diagnosticos: List[DiagnosticoCompilacion] = field(default_factory=list)
     stdout_crudo: str = ""
     stderr_crudo: str = ""
+    suprimidos: int = 0
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        d = {
             "schema_version": "1.0.0",
             "exito": self.exito,
             "codigo_retorno": self.codigo_retorno,
@@ -70,3 +71,7 @@ class ResultadoCompilacion:
             "total_diagnosticos": len(self.diagnosticos),
             "diagnosticos": [d.to_dict() for d in self.diagnosticos],
         }
+        if self.suprimidos > 0:
+            d["suprimidos"] = self.suprimidos
+            d["suppressed_count"] = self.suprimidos
+        return d
