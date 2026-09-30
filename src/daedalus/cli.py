@@ -158,15 +158,23 @@ def report_cmd(
 
 @app.command("translate")
 def translate_cmd(
-    stderr_file: Optional[Path] = typer.Argument(None, help="Archivo con stderr crudo o leer desde stdin."),
+    stderr_file: Optional[Path] = typer.Argument(
+        None, exists=True, dir_okay=False, help="Archivo con stderr crudo o leer desde stdin."
+    ),
     json_output: bool = typer.Option(False, "--json", help="Salida en JSON."),
     dedup: bool = typer.Option(False, "--dedup", help="Suprimir advertencias repetitivas o en cascada."),
 ) -> None:
     """Traduce un bloque de texto o log de compilador a diagnósticos didácticos."""
-    if stderr_file and stderr_file.is_file():
+    # Un archivo que no existe caía a leer stdin: en un script daba «No se encontraron errores»
+    # y en la terminal se quedaba esperando (N-DAEDALUS-01). `exists=True` lo rechaza.
+    if stderr_file is not None:
         texto = stderr_file.read_text(encoding="utf-8")
     else:
         import sys
+        if sys.stdin.isatty():
+            err_console.print("[bold red]Error:[/bold red] pasá el archivo con la salida del compilador "
+                              "o enviásela por la entrada estándar: gcc main.c 2>&1 | daedalus translate")
+            raise typer.Exit(code=2)
         texto = sys.stdin.read()
 
     diagnosticos = parsear_stderr_compilador(texto)

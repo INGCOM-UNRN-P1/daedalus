@@ -38,3 +38,19 @@ def test_cli_compile_error_json(tmp_path):
     data = json.loads(res.stdout)
     assert data["exito"] is False
     assert data["total_diagnosticos"] >= 1
+
+
+def test_translate_con_un_archivo_que_no_existe_es_un_error(tmp_path):
+    """N-DAEDALUS-01: caía a leer stdin y respondía «No se encontraron errores» con código 0."""
+    res = runner.invoke(app, ["translate", str(tmp_path / "no_existe.log")], env={"COLUMNS": "200"})
+    assert res.exit_code == 2
+    assert "no_existe.log" in res.output
+    assert "No se encontraron errores" not in res.output
+
+
+def test_translate_lee_el_archivo_o_la_entrada_estandar(tmp_path):
+    log = tmp_path / "gcc.log"
+    log.write_text("main.c:10:5: warning: unused variable 'x' [-Wunused-variable]\n", encoding="utf-8")
+    assert "Variable Declarada sin Uso" in runner.invoke(app, ["translate", str(log)]).output
+    res = runner.invoke(app, ["translate"], input=log.read_text(encoding="utf-8"))
+    assert res.exit_code == 0 and "Variable Declarada sin Uso" in res.output
