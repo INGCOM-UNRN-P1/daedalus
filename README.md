@@ -72,3 +72,44 @@ daedalus doctor
 | `check-arch LOG` | Detecta advertencias de tamaño que cambian entre 32 y 64 bits. |
 | `check-standards FUENTE` | Compara la compatibilidad con C99, C11, C17 y C2x/C23. |
 | `check-deps RUTAS...` | Grafo de inclusiones y dependencias circulares entre cabeceras. |
+
+<!-- p1:referencia:inicio — generado por p1-tools/scripts/readme_generado.py: no editar a mano -->
+
+## Referencia rápida
+
+### Requisitos
+
+- Python ≥ 3.11 y [uv](https://docs.astral.sh/uv/getting-started/installation/).
+- Programas del sistema: `gcc`.
+
+| Sistema | `gcc` |
+|:--|:--|
+| Debian / Ubuntu | `sudo apt install gcc` |
+| Fedora | `sudo dnf install gcc` |
+| Windows | incluido en el entorno de la cátedra (MSYS2 UCRT64) |
+| macOS | `xcode-select --install` (clang como `gcc`) |
+
+### Comandos
+
+| Comando | Descripción |
+|:--|:--|
+| `daedalus compile` | Compila código C con banderas estrictas de cátedra y traduce errores a español didáctico. |
+| `daedalus report` | Genera directamente la sección de reporte Markdown de DAEDALUS para Dredd. |
+| `daedalus translate` | Traduce un bloque de texto o log de compilador a diagnósticos didácticos. |
+| `daedalus doctor` | Verifica disponibilidad de herramientas del toolchain (GCC, Clang, Make, GDB, ld). |
+| `daedalus preprocess` | Ejecuta el preprocesador de C (gcc -E) y limpia comentarios y directivas del sistema. |
+| `daedalus explain-opt` | Explica el comportamiento didáctico y los efectos de los niveles de optimización de GCC. |
+| `daedalus compile-commands` | Genera compile_commands.json para Language Servers (Clangd / VS Code / Neovim). |
+| `daedalus expand-macro` | Expande y desglosa macros anidadas paso a paso para traducir errores complejos. |
+| `daedalus history`, `daedalus stats` | Muestra el historial y estadísticas de errores frecuentes del estudiante. |
+| `daedalus check-flags` | Audita las banderas de compilación y sugiere flags pedagógicos obligatorios faltantes. |
+| `daedalus suggest-flags` | Analiza un archivo fuente, log de errores o Makefile y sugiere flags de compilación/enlazado faltantes. |
+| `daedalus list-warnings`, `daedalus catalog` | Lista todas las advertencias y reglas pedagógicas documentadas en el catálogo de diagnósticos. |
+| `daedalus guide` | Genera una guía interactiva de resolución paso a paso en Markdown para el archivo C indicado. |
+| `daedalus check-arch` | Audita advertencias relacionadas con incompatibilidades de tamaño en 32 vs 64 bits. |
+| `daedalus check-standards` | Verifica la compatibilidad del código simultáneamente contra C99, C11, C17 y C2x/C23. |
+| `daedalus check-deps` | Construye el grafo de inclusiones y detecta dependencias circulares entre cabeceras. |
+
+Ayuda de cada comando: `daedalus <comando> -h`.
+
+<!-- p1:referencia:fin -->
