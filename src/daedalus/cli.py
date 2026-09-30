@@ -71,7 +71,7 @@ def generar_seccion_markdown(resultado) -> str:
 
 @app.command("compile")
 def compile_cmd(
-    fuentes: List[Path] = typer.Argument(..., help="Archivos fuentes .c a compilar."),
+    fuentes: List[Path] = typer.Argument(..., exists=True, help="Archivos fuentes .c a compilar."),
     output: Optional[Path] = typer.Option(None, "--output", "-o", help="Ruta del binario de salida."),
     json_output: bool = typer.Option(False, "--json", help="Emitir reporte en JSON."),
     output_md: Optional[Path] = typer.Option(None, "--md", "--output-md", help="Generar sección de reporte en formato Markdown para fusión en Dredd."),
@@ -139,7 +139,7 @@ def compile_cmd(
 
 @app.command("report")
 def report_cmd(
-    fuentes: List[Path] = typer.Argument(..., help="Archivos fuentes .c a compilar y auditar."),
+    fuentes: List[Path] = typer.Argument(..., exists=True, help="Archivos fuentes .c a compilar y auditar."),
     output: Optional[Path] = typer.Option(None, "--output", "-o", help="Ruta de destino del archivo Markdown."),
     flags: Optional[str] = typer.Option(None, "--flags", help="Banderas adicionales para GCC."),
     compiler: Optional[str] = typer.Option(None, "--compiler", "--cc", help="Compilador backend ('gcc' o 'clang')."),
@@ -217,7 +217,7 @@ def doctor_cmd(
 
 @app.command("preprocess")
 def preprocess_cmd(
-    fuente: Path = typer.Argument(..., help="Archivo fuente .c a preprocesar."),
+    fuente: Path = typer.Argument(..., exists=True, help="Archivo fuente .c a preprocesar."),
     output: Optional[Path] = typer.Option(None, "--output", "-o", help="Guardar salida preprocesada en archivo."),
 ) -> None:
     """Ejecuta el preprocesador de C (gcc -E) y limpia comentarios y directivas del sistema."""
@@ -269,7 +269,7 @@ def explain_opt_cmd(
 
 @app.command("compile-commands")
 def compile_commands_cmd(
-    fuentes: List[Path] = typer.Argument(..., help="Archivos fuentes del proyecto."),
+    fuentes: List[Path] = typer.Argument(..., exists=True, help="Archivos fuentes del proyecto."),
     output: Path = typer.Option(Path("compile_commands.json"), "--output", "-o", help="Ruta de destino del archivo JSON."),
 ) -> None:
     """Genera compile_commands.json para Language Servers (Clangd / VS Code / Neovim)."""
@@ -291,7 +291,7 @@ def compile_commands_cmd(
 
 @app.command("expand-macro")
 def expand_macro_cmd(
-    fuente: Path = typer.Argument(..., help="Archivo C con definiciones o usos de macros."),
+    fuente: Path = typer.Argument(..., exists=True, help="Archivo C con definiciones o usos de macros."),
     macro: Optional[str] = typer.Option(None, "--macro", "-m", help="Nombre de la macro a expandir e inspeccionar."),
     compiler: Optional[str] = typer.Option(None, "--compiler", "--cc", help="Compilador a utilizar."),
 ) -> None:
@@ -367,7 +367,7 @@ def check_flags_cmd(
 
 @app.command("suggest-flags")
 def suggest_flags_cmd(
-    fuente_o_log: Optional[Path] = typer.Argument(None, help="Archivo fuente C o log de compilación a analizar."),
+    fuente_o_log: Optional[Path] = typer.Argument(None, exists=True, help="Archivo fuente C o log de compilación a analizar."),
     makefile: Optional[Path] = typer.Option(None, "--makefile", "-m", help="Ruta al Makefile a inspeccionar."),
     flags: Optional[str] = typer.Option(None, "--flags", "-f", help="Lista de flags actuales separados por espacio."),
     json_output: bool = typer.Option(False, "--json", help="Emitir resultado en JSON."),
@@ -472,7 +472,7 @@ def check_arch_cmd(
 
 @app.command("check-standards")
 def check_standards_cmd(
-    fuente: Path = typer.Argument(..., help="Archivo C a validar contra múltiples estándares."),
+    fuente: Path = typer.Argument(..., exists=True, help="Archivo C a validar contra múltiples estándares."),
     json_output: bool = typer.Option(False, "--json", help="Salida en JSON."),
 ) -> None:
     """Verifica la compatibilidad del código simultáneamente contra C99, C11, C17 y C2x/C23."""
@@ -500,7 +500,7 @@ def check_standards_cmd(
 
 @app.command("check-deps")
 def check_deps_cmd(
-    rutas: List[Path] = typer.Argument(..., help="Directorios o archivos C/H a auditar."),
+    rutas: List[Path] = typer.Argument(..., exists=True, help="Directorios o archivos C/H a auditar."),
     json_output: bool = typer.Option(False, "--json", help="Salida en JSON."),
 ) -> None:
     """Construye el grafo de inclusiones y detecta dependencias circulares entre cabeceras."""
