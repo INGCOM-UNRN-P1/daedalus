@@ -14,6 +14,7 @@
 - Traducción pedagógica de errores y advertencias de compilador (GCC, Clang) y enlazador (`ld`) a explicaciones en español rioplatense.
 - Generación automatizada de base de compilación (`compile_commands.json`).
 - Modo interactivo y salida estructurada JSON (`--json`) para integración con orquestadores.
+- Modo pista para evaluaciones (`--pista` o `P1_PISTA=1`, que ripley exporta con `[general] pistas = true`): cada error dice qué tipo de problema es y en qué función está, sin la línea, el mensaje crudo ni la corrección.
 - Verificación del estado de salud del toolchain mediante `daedalus doctor`.
 
 ### Límites de Responsabilidad y Delegación (Qué no cubre)
@@ -92,10 +93,17 @@ Compila código C con banderas estrictas de cátedra y traduce errores a españo
 | `--compiler`, `--cc` | `Optional[str]` | `None` | Compilador backend a utilizar: 'gcc' o 'clang'. |
 | `--guide` | `bool` | `False` | Generar guía detallada paso a paso en Markdown. |
 | `--dedup` | `bool` | `False` | Suprimir advertencias repetitivas o en cascada. |
+| `--pista` | `bool` | `False` | Modo pista (o `P1_PISTA=1`): el tipo de error y la función, sin la línea ni la corrección. |
+
+En modo pista cada diagnóstico conserva el título y la explicación (lo que hay que entender), suma la
+función donde está (`funcion` en el JSON, que además lleva `"pista": true`) y oculta la línea, la columna,
+el mensaje crudo, el fragmento de código y la sugerencia; `--guide` no está disponible. Es para
+evaluaciones: el estudiante sabe qué buscar y dónde, pero lo encuentra y lo corrige solo.
 
 #### Ejemplo de Invocación
 ```bash
 daedalus compile <fuentes>
+daedalus compile main.c --pista
 ```
 
 ### `daedalus report`
@@ -129,6 +137,7 @@ Traduce un bloque de texto o log de compilador a diagnósticos didácticos.
 | `--stderr-file` | `Optional[Path]` | `None` | Archivo con stderr crudo o leer desde stdin. |
 | `--json` | `bool` | `False` | Salida en JSON. |
 | `--dedup` | `bool` | `False` | Suprimir advertencias repetitivas o en cascada. |
+| `--pista` | `bool` | `False` | Modo pista (o `P1_PISTA=1`): el tipo de error y la función, sin la línea ni la corrección. |
 
 #### Ejemplo de Invocación
 ```bash

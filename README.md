@@ -13,6 +13,7 @@ DAEDALUS compila programas C bajo los estándares rigurosos de la cátedra (C11,
 - Traducción pedagógica de errores y advertencias de compilador (GCC, Clang) y enlazador (`ld`) a explicaciones en español rioplatense.
 - Generación automatizada de base de compilación (`compile_commands.json`).
 - Modo interactivo y salida estructurada JSON (`--json`) para integración con orquestadores.
+- Modo pista para evaluaciones (`--pista` o `P1_PISTA=1`, que ripley exporta con `[general] pistas = true`): cada error dice qué tipo de problema es y en qué función está, sin la línea, el mensaje crudo ni la corrección.
 - Verificación del estado de salud del toolchain mediante `daedalus doctor`.
 
 ### Qué no cubre (Límites y Delegación)

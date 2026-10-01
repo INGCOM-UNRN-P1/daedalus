@@ -23,6 +23,7 @@ class DiagnosticoCompilacion:
     cita_iso_c: Optional[str] = None
     flags_sugeridos: List[str] = field(default_factory=list)
     code_snippet: Optional[str] = None
+    funcion: Optional[str] = None  # en modo pista: dónde está el error, en lugar de la línea
 
     def to_dict(self) -> Dict[str, Any]:
         d: Dict[str, Any] = {
@@ -48,6 +49,8 @@ class DiagnosticoCompilacion:
             d["suggested_flags"] = self.flags_sugeridos
         if self.code_snippet:
             d["code_snippet"] = self.code_snippet
+        if self.funcion:
+            d["funcion"] = self.funcion
         return d
 
 
@@ -61,6 +64,7 @@ class ResultadoCompilacion:
     stdout_crudo: str = ""
     stderr_crudo: str = ""
     suprimidos: int = 0
+    pista: bool = False  # modo pista: sin líneas ni sugerencias (ver core/pista.py)
 
     def to_dict(self) -> Dict[str, Any]:
         d = {
@@ -74,4 +78,6 @@ class ResultadoCompilacion:
         if self.suprimidos > 0:
             d["suprimidos"] = self.suprimidos
             d["suppressed_count"] = self.suprimidos
+        if self.pista:
+            d["pista"] = True
         return d

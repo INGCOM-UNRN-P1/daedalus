@@ -21,6 +21,7 @@ from daedalus.core.diagnostic_catalog import list_catalog_entries
 from daedalus.core.filter import filter_and_deduplicate
 from daedalus.core.guide_generator import generate_resolution_guide
 from daedalus.core.macro_explainer import expandir_macro
+from daedalus.core.pista import a_pista, pista_activa, resultado_en_pista
 from daedalus.core.standards import sugerir_flags_pedagogicos, verificar_compatibilidad_estandares
 from daedalus.core.stats import obtener_estadisticas, registrar_diagnosticos
 from daedalus.core.suggest_flags import analyze_missing_flags
@@ -79,6 +80,7 @@ def compile_cmd(
     compiler: Optional[str] = typer.Option(None, "--compiler", "--cc", help="Compilador backend a utilizar: 'gcc' o 'clang'."),
     guide: bool = typer.Option(False, "--guide", help="Generar guía detallada paso a paso en Markdown."),
     dedup: bool = typer.Option(False, "--dedup", help="Suprimir advertencias repetitivas o en cascada."),
+    pista: bool = typer.Option(False, "--pista", help="Modo pista (o P1_PISTA=1): el tipo de error y la función, sin la línea ni la corrección."),
 ) -> None:
     """Compila código C con banderas estrictas de cátedra y traduce errores a español didáctico."""
     extra_flags = flags.split() if flags else None
@@ -90,6 +92,13 @@ def compile_cmd(
     # Registrar en historial de errores
     if resultado.diagnosticos:
         registrar_diagnosticos(resultado.diagnosticos, fuentes)
+
+    en_pista = pista_activa(pista)
+    if en_pista:
+        resultado = resultado_en_pista(resultado)
+        if guide:
+            err_console.print("[yellow]La guía de resolución no está disponible en modo pista.[/yellow]")
+            guide = False
 
     if guide:
         guide_text = generate_resolution_guide(resultado)
@@ -121,15 +130,26 @@ def compile_cmd(
 
     for idx, d in enumerate(resultado.diagnosticos, 1):
         color = "red" if d.severidad == "error" else "yellow" if d.severidad == "warning" else "blue"
-        loc = f"{d.archivo}:{d.linea}:{d.columna}" if d.linea else (d.archivo or "compilador")
+        if d.linea:
+            loc = f"{d.archivo}:{d.linea}:{d.columna}"
+        elif d.funcion:
+            loc = f"{d.archivo}, en la función {d.funcion}()"
+        else:
+            loc = d.archivo or "compilador"
 
         cuerpo = (
             f"📍 [bold]Ubicación:[/bold] [yellow]{loc}[/yellow]\n"
-            f"🔍 [bold]Causa:[/bold] {d.explicacion}\n\n"
-            f"💡 [bold green]Sugerencia:[/bold green] {d.sugerencia}\n\n"
-            f"[dim]Mensaje crudo: {d.mensaje_original}[/dim]"
+            f"🔍 [bold]Causa:[/bold] {d.explicacion}"
         )
+        if d.sugerencia:
+            cuerpo += f"\n\n💡 [bold green]Sugerencia:[/bold green] {d.sugerencia}"
+        if d.mensaje_original:
+            cuerpo += f"\n\n[dim]Mensaje crudo: {d.mensaje_original}[/dim]"
         console.print(Panel(cuerpo, title=f"[{color}][bold]{d.severidad.upper()}: {d.titulo}[/bold][/{color}]", border_style=color))
+
+    if en_pista:
+        console.print("[dim]Modo pista: buscá cada error en la función indicada; la línea y la corrección no se "
+                      "muestran.[/dim]")
 
     if resultado.suprimidos > 0:
         console.print(f"[dim]ℹ Se suprimieron {resultado.suprimidos} advertencias repetitivas o en cascada para mayor claridad.[/dim]")
@@ -163,6 +183,7 @@ def translate_cmd(
     ),
     json_output: bool = typer.Option(False, "--json", help="Salida en JSON."),
     dedup: bool = typer.Option(False, "--dedup", help="Suprimir advertencias repetitivas o en cascada."),
+    pista: bool = typer.Option(False, "--pista", help="Modo pista (o P1_PISTA=1): el tipo de error y la función, sin la línea ni la corrección."),
 ) -> None:
     """Traduce un bloque de texto o log de compilador a diagnósticos didácticos."""
     # Un archivo que no existe caía a leer stdin: en un script daba «No se encontraron errores»
@@ -181,6 +202,9 @@ def translate_cmd(
     suprimidos = 0
     if dedup and diagnosticos:
         diagnosticos, suprimidos = filter_and_deduplicate(diagnosticos)
+    if pista_activa(pista):
+        fuentes_leidas: dict = {}
+        diagnosticos = [a_pista(d, fuentes_leidas) for d in diagnosticos]
 
     if json_output:
         res_data = [d.to_dict() for d in diagnosticos]
@@ -192,7 +216,8 @@ def translate_cmd(
         raise typer.Exit(code=0)
 
     for d in diagnosticos:
-        console.print(f"[bold red]• {d.titulo}[/bold red] ({d.archivo}:{d.linea}): {d.explicacion}")
+        donde = f"{d.archivo}:{d.linea}" if d.linea else (f"{d.archivo}, en {d.funcion}()" if d.funcion else d.archivo)
+        console.print(f"[bold red]• {d.titulo}[/bold red] ({donde}): {d.explicacion}")
 
     if suprimidos > 0:
         console.print(f"[dim]ℹ Se suprimieron {suprimidos} advertencias repetitivas o en cascada para mayor claridad.[/dim]")
