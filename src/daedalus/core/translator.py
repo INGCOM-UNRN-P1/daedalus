@@ -75,8 +75,10 @@ REGLAS_TRADUCCION: List[Tuple[str, str, str, str]] = [
     ),
 ]
 
+# La ruta puede empezar con una letra de unidad (Windows: «C:\\Users\\…\\tp.c:3:5: error: …»); sin
+# contemplarla, el «:» de la unidad cortaba el archivo y no se reconocía ningún diagnóstico.
 _GCC_LINE_RE = re.compile(
-    r"^(?P<file>[^:\n]+):(?P<line>\d+):(?:(?P<col>\d+):)?\s*(?P<kind>error|warning|note|fatal error):\s*(?P<msg>.+)$"
+    r"^(?P<file>(?:[A-Za-z]:)?[^:\n]+):(?P<line>\d+):(?:(?P<col>\d+):)?\s*(?P<kind>error|warning|note|fatal error):\s*(?P<msg>.+)$"
 )
 
 

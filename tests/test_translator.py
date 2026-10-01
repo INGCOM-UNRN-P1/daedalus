@@ -52,3 +52,17 @@ def test_compilar_codigo_con_error_sintaxis(tmp_path):
     assert res.exito is False
     assert len(res.diagnosticos) >= 1
     assert any("punto y coma" in d.titulo for d in res.diagnosticos)
+
+
+def test_parsea_diagnosticos_con_rutas_de_windows():
+    # MinGW (MSYS2 UCRT64) informa la ruta con la letra de unidad: antes no se reconocía ningún diagnóstico.
+    from daedalus.core.translator import parsear_stderr_compilador
+
+    stderr = ("C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tp\\error.c: In function 'main':\n"
+              "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tp\\error.c:1:28: error: expected ',' or ';' before 'return'\n"
+              "D:/a/tp/main.c:4:9: warning: unused variable 'x' [-Wunused-variable]\n")
+    diagnosticos = parsear_stderr_compilador(stderr)
+    assert [(d.archivo, d.linea, d.columna, d.severidad) for d in diagnosticos] == [
+        ("C:\\Users\\runneradmin\\AppData\\Local\\Temp\\tp\\error.c", 1, 28, "error"),
+        ("D:/a/tp/main.c", 4, 9, "warning"),
+    ]
