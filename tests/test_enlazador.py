@@ -84,3 +84,16 @@ def test_formato_y_declaracion_implicita_ya_se_traducen():
     formato, implicita = parsear_stderr_compilador(stderr)
     assert "char" in formato.titulo.lower() and "Diagnóstico" not in formato.titulo
     assert "strlen" in implicita.titulo
+
+
+def test_hallazgos_en_la_taxonomia_comun():
+    """La salida JSON suma los hallazgos con la forma común (yutani.hallazgos)."""
+    from daedalus.core.taxonomia import a_hallazgo, clasificar
+
+    (enlace,) = parsear_stderr_compilador(SIN_DEFINICION)
+    assert clasificar(enlace) == ("referencia-sin-definir", "enlazado")
+    h = a_hallazgo(enlace)
+    assert h["id"] == "daedalus:referencia-sin-definir" and h["severidad"] == "error"
+    assert h["enlace"].endswith("/compilacion")
+    (implicita,) = parsear_stderr_compilador("f.c:6:5: error: implicit declaration of function ‘strlen’\n")
+    assert clasificar(implicita) == ("declaracion-implicita", "declaraciones")

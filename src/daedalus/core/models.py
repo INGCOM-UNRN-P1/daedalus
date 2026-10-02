@@ -75,6 +75,9 @@ class ResultadoCompilacion:
             "total_diagnosticos": len(self.diagnosticos),
             "diagnosticos": [d.to_dict() for d in self.diagnosticos],
         }
+        # La forma común del ecosistema (yutani.hallazgos), para dredd y el apunte.
+        from daedalus.core.taxonomia import a_hallazgo
+        d["hallazgos"] = [a_hallazgo(x) for x in self.diagnosticos if x.severidad != "note"]
         if self.suprimidos > 0:
             d["suprimidos"] = self.suprimidos
             d["suppressed_count"] = self.suprimidos
