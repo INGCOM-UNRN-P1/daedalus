@@ -25,7 +25,7 @@ from daedalus.core.pista import a_pista, pista_activa, resultado_en_pista
 from daedalus.core.standards import sugerir_flags_pedagogicos, verificar_compatibilidad_estandares
 from daedalus.core.stats import obtener_estadisticas, registrar_diagnosticos
 from daedalus.core.suggest_flags import analyze_missing_flags
-from daedalus.core.translator import parsear_stderr_compilador
+from daedalus.core.translator import parsear_stderr_compilador, primer_error
 
 console = Console()
 err_console = Console(stderr=True)
@@ -81,6 +81,7 @@ def compile_cmd(
     guide: bool = typer.Option(False, "--guide", help="Generar guía detallada paso a paso en Markdown."),
     dedup: bool = typer.Option(False, "--dedup", help="Suprimir advertencias repetitivas o en cascada."),
     pista: bool = typer.Option(False, "--pista", help="Modo pista (o P1_PISTA=1): el tipo de error y la función, sin la línea ni la corrección."),
+    primero: bool = typer.Option(False, "--primer-error", help="Mostrar solo el primer error con su causa: los siguientes suelen ser consecuencia de ese."),
 ) -> None:
     """Compila código C con banderas estrictas de cátedra y traduce errores a español didáctico."""
     extra_flags = flags.split() if flags else None
@@ -92,6 +93,10 @@ def compile_cmd(
     # Registrar en historial de errores
     if resultado.diagnosticos:
         registrar_diagnosticos(resultado.diagnosticos, fuentes)
+
+    if primero and len(resultado.diagnosticos) > 1:
+        resultado.suprimidos += len(resultado.diagnosticos) - 1
+        resultado.diagnosticos = primer_error(resultado.diagnosticos)
 
     en_pista = pista_activa(pista)
     if en_pista:
@@ -152,7 +157,7 @@ def compile_cmd(
                       "muestran.[/dim]")
 
     if resultado.suprimidos > 0:
-        console.print(f"[dim]ℹ Se suprimieron {resultado.suprimidos} advertencias repetitivas o en cascada para mayor claridad.[/dim]")
+        console.print(f"[dim]ℹ Se ocultaron {resultado.suprimidos} diagnósticos repetitivos, en cascada o posteriores al primero (--primer-error).[/dim]")
 
     raise typer.Exit(code=1)
 
@@ -184,6 +189,7 @@ def translate_cmd(
     json_output: bool = typer.Option(False, "--json", help="Salida en JSON."),
     dedup: bool = typer.Option(False, "--dedup", help="Suprimir advertencias repetitivas o en cascada."),
     pista: bool = typer.Option(False, "--pista", help="Modo pista (o P1_PISTA=1): el tipo de error y la función, sin la línea ni la corrección."),
+    primero: bool = typer.Option(False, "--primer-error", help="Mostrar solo el primer error con su causa: los siguientes suelen ser consecuencia de ese."),
 ) -> None:
     """Traduce un bloque de texto o log de compilador a diagnósticos didácticos."""
     # Un archivo que no existe caía a leer stdin: en un script daba «No se encontraron errores»
@@ -202,6 +208,9 @@ def translate_cmd(
     suprimidos = 0
     if dedup and diagnosticos:
         diagnosticos, suprimidos = filter_and_deduplicate(diagnosticos)
+    if primero and len(diagnosticos) > 1:
+        suprimidos += len(diagnosticos) - 1
+        diagnosticos = primer_error(diagnosticos)
     if pista_activa(pista):
         fuentes_leidas: dict = {}
         diagnosticos = [a_pista(d, fuentes_leidas) for d in diagnosticos]

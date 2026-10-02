@@ -50,10 +50,23 @@ REGLAS_TRADUCCION: List[Tuple[str, str, str, str]] = [
         "Ejemplo típico: `if (x = 0)` cuando se quiso comparar, o asignar a un literal.",
     ),
     (
-        r"undefined reference to `(?P<name>[^']+)'",
+        r"undefined reference to [`'](?P<name>main)'",
+        "Falta la función `main`",
+        "Se pidió armar un ejecutable, pero ninguno de los archivos compilados define `int main(void)`.",
+        "Si el archivo es una biblioteca, compilalo con `-c` (genera un `.o`); si no, revisá que `main` esté escrito así, en minúsculas.",
+    ),
+    (
+        r"undefined reference to [`'](?P<name>[^']+)'",
         "Símbolo no encontrado al enlazar (linker): `{name}`",
-        "El compilador encontró la declaración pero `ld` no halló la implementación binaria.",
-        "Asegurate de compilar todos los archivos `.c` involucrados o agregar las banderas de librerías (ej. `-lm`).",
+        "El compilador conoce el prototipo de `{name}`, pero el enlazador no encontró su definición en ningún archivo compilado.",
+        "Compilá también el `.c` que define `{name}` (por ejemplo `gcc main.c lista.c`), revisá que el nombre coincida "
+        "exactamente con la definición o agregá la biblioteca que la contiene (por ejemplo `-lm`).",
+    ),
+    (
+        r"multiple definition of [`'](?P<name>[^']+)'",
+        "Definición duplicada de `{name}`",
+        "`{name}` está definida en más de un archivo: dos `.c`, o un `.h` con la definición incluido por varios `.c`.",
+        "Definila en un solo `.c`. En el `.h` dejá solo el prototipo (funciones) o `extern` (variables globales).",
     ),
     (
         r"assignment to '(?P<dst>[^']+)' from incompatible pointer type '(?P<src>[^']+)'",
@@ -155,14 +168,60 @@ def traducir_linea_diagnostico(mensaje: str) -> Tuple[str, str, str]:
     return tit, exp, sug
 
 
+# Mensajes del enlazador (ld, collect2): no tienen la forma archivo:línea, así que _GCC_LINE_RE no los
+# reconocía y un error de enlace terminaba sin ningún diagnóstico. ld antepone «in function `f':» en
+# una línea aparte y nombra el archivo fuente solo cuando el objeto tiene información de depuración.
+_LD_EN_FUNCION_RE = re.compile(r"in function [`'](?P<fn>[^'`]+)':?\s*$")
+_LD_MENSAJE_RE = re.compile(r"(?P<msg>(?:undefined reference to|multiple definition of|cannot find -l).*)$")
+_LD_ARCHIVO_RE = re.compile(r"(?:^|\s)(?P<file>(?:[A-Za-z]:)?[^\s:(]+\.c):\(")
+_LD_FALLO_RE = re.compile(r"ld returned \d+ exit status")
+
+
+def _diagnostico_de_enlace(linea: str, funcion: Optional[str]) -> Optional[DiagnosticoCompilacion]:
+    m = _LD_MENSAJE_RE.search(linea)
+    if not m:
+        return None
+    msg = m.group("msg").strip()
+    archivo = _LD_ARCHIVO_RE.search(linea[: m.start()])
+    tit, exp, sug, flag, cause, cit, flags_sugg = traducir_linea_diagnostico_completo(msg)
+    return DiagnosticoCompilacion(
+        archivo=archivo.group("file") if archivo else None,
+        linea=None,
+        columna=None,
+        severidad="error",
+        mensaje_original=msg,
+        titulo=tit,
+        explicacion=exp,
+        sugerencia=sug,
+        flag=flag,
+        causa_raiz=cause,
+        cita_iso_c=cit,
+        flags_sugeridos=flags_sugg,
+        funcion=funcion,
+    )
+
+
 def parsear_stderr_compilador(stderr: str) -> List[DiagnosticoCompilacion]:
     """Parsea el stderr emitido por GCC o Clang y genera la lista de diagnósticos didácticos."""
     diagnosticos: List[DiagnosticoCompilacion] = []
     lineas = stderr.splitlines()
+    funcion_ld: Optional[str] = None
+    fallo_de_enlace = False
 
     for l in lineas:
-        l_str = l.strip()
+        l_str = normalizar_comillas(l.strip())
         m = _GCC_LINE_RE.match(l_str)
+        if not m:
+            en_funcion = _LD_EN_FUNCION_RE.search(l_str)
+            if en_funcion:
+                funcion_ld = en_funcion.group("fn")
+                continue
+            diag = _diagnostico_de_enlace(l_str, funcion_ld)
+            if diag:
+                diagnosticos.append(diag)
+            elif _LD_FALLO_RE.search(l_str):
+                fallo_de_enlace = True
+            continue
         if m:
             f = m.group("file")
             lin = int(m.group("line"))
@@ -186,4 +245,22 @@ def parsear_stderr_compilador(stderr: str) -> List[DiagnosticoCompilacion]:
                 flags_sugeridos=flags_sugg,
             ))
 
+    if fallo_de_enlace and not any(d.severidad == "error" for d in diagnosticos):
+        diagnosticos.append(DiagnosticoCompilacion(
+            archivo=None, linea=None, columna=None, severidad="error",
+            mensaje_original="ld returned 1 exit status",
+            titulo="Falló el enlazado",
+            explicacion="El enlazador (ld) no pudo armar el ejecutable; el motivo está en las líneas anteriores del compilador.",
+            sugerencia="Compilá con `-v` o mirá la salida completa de gcc para ver qué símbolo o biblioteca falta.",
+        ))
     return diagnosticos
+
+
+def primer_error(diagnosticos: List[DiagnosticoCompilacion]) -> List[DiagnosticoCompilacion]:
+    """El primer error (o, si no hay errores, la primera advertencia): los siguientes suelen ser
+    consecuencia del primero, y en las primeras semanas conviene arreglar de a uno."""
+    for severidad in ("error", "warning"):
+        for d in diagnosticos:
+            if d.severidad == severidad:
+                return [d]
+    return diagnosticos[:1]
