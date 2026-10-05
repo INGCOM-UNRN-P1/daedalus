@@ -1,9 +1,7 @@
 """Sugerencia didáctica de flags de compilación y enlazado faltantes para ESPER."""
 
 from __future__ import annotations
-import re
-from typing import List, Dict, Tuple, Any
-from daedalus.core.models import DiagnosticoCompilacion
+from typing import List, Dict, Any
 
 
 MATH_SYMBOLS = {"sin", "cos", "tan", "sqrt", "pow", "fabs", "ceil", "floor", "log", "exp", "asin", "acos", "atan", "fmod"}

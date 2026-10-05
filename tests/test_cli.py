@@ -1,7 +1,6 @@
 """Tests de integración de la CLI de DAEDALUS."""
 
 import json
-from pathlib import Path
 from typer.testing import CliRunner
 from daedalus.cli import app
 

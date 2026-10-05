@@ -1,7 +1,5 @@
 """Tests unitarios para el traductor de diagnósticos de DAEDALUS."""
 
-from pathlib import Path
-import pytest
 from daedalus.core.compiler import compilar_archivos
 from daedalus.core.translator import parsear_stderr_compilador, traducir_linea_diagnostico
 

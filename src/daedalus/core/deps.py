@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Set
 
 
 INCLUDE_REGEX = re.compile(r'^\s*#\s*include\s*["<]([^">]+)[">]')

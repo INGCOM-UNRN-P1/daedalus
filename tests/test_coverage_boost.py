@@ -1,11 +1,9 @@
 """Tests adicionales para maximizar la cobertura en DAEDALUS."""
 
-import json
-from pathlib import Path
 from typer.testing import CliRunner
 import daedalus.cli
 from daedalus.cli import app
-from daedalus.core.compiler import compilar_archivos, parsear_stderr_compilador
+from daedalus.core.compiler import compilar_archivos
 from daedalus.ripley_plugin import DaedalusPlugin
 
 runner = CliRunner()

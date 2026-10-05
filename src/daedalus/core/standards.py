@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import re
 import shutil
 import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from daedalus.core.compiler import FLAGS_CATEDRA_DEFAULT
 
 
 ESTANDARES_C = ["c99", "c11", "c17", "c2x"]

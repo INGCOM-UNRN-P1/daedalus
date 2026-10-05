@@ -1,11 +1,10 @@
 """Tests de integración de las funcionalidades migradas de ESPER a DAEDALUS."""
 
 import json
-from pathlib import Path
 from typer.testing import CliRunner
 from daedalus.cli import app
 from daedalus.core.arch_check import check_arch_incompatibilities
-from daedalus.core.diagnostic_catalog import list_catalog_entries, lookup_explanation
+from daedalus.core.diagnostic_catalog import list_catalog_entries
 from daedalus.core.filter import filter_and_deduplicate
 from daedalus.core.guide_generator import generate_resolution_guide
 from daedalus.core.models import DiagnosticoCompilacion, ResultadoCompilacion

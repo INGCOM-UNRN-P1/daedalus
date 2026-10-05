@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 import re
-from typing import List, Dict, Any
+from typing import List, Dict
 
 
 ARCH_PATTERNS = [
