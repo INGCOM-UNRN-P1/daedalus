@@ -11,7 +11,7 @@ import pytest
 from typer.testing import CliRunner
 
 from daedalus.cli import app
-from daedalus.core.translator import parsear_stderr_compilador, primer_error
+from daedalus.core.translator import parsear_stderr_compilador, primer_error, traducir_linea_diagnostico_completo
 
 runner = CliRunner()
 con_gcc = pytest.mark.skipif(shutil.which("gcc") is None, reason="hace falta gcc")
@@ -97,3 +97,30 @@ def test_hallazgos_en_la_taxonomia_comun():
     assert h["enlace"].endswith("/compilacion")
     (implicita,) = parsear_stderr_compilador("f.c:6:5: error: implicit declaration of function ‘strlen’\n")
     assert clasificar(implicita) == ("declaracion-implicita", "declaraciones")
+
+
+@pytest.mark.parametrize("mensaje, en_titulo, en_sugerencia", [
+    ("format ‘%d’ expects argument of type ‘int’, but argument 2 has type ‘long int’ [-Wformat=]",
+     "`long int`", "%ld"),
+    ("format ‘%d’ expects argument of type ‘int’, but argument 2 has type ‘double’ [-Wformat=]", "`double`", "%f"),
+    ("format ‘%d’ expects argument of type ‘int *’, but argument 2 has type ‘int’ [-Wformat=]", "`int *`", "&"),
+    ("format ‘%s’ expects argument of type ‘char *’, but argument 2 has type ‘char (*)[10]’ [-Wformat=]",
+     "char (*)[10]", "Quitá el `&`"),
+    ("format ‘%s’ expects argument of type ‘char *’, but argument 3 has type ‘int’ [-Wformat=]", "`int`", "%d"),
+    ("format ‘%d’ expects a matching ‘int’ argument [-Wformat=]", "Falta el argumento", "Agregá"),
+    ("implicit declaration of function ‘strlen’ [-Wimplicit-function-declaration]", "strlen", "<string.h>"),
+    ("incompatible implicit declaration of built-in function ‘malloc’ [-Wbuiltin-declaration-mismatch]",
+     "malloc", "<stdlib.h>"),
+    ("include ‘<string.h>’ or provide a declaration of ‘strlen’", "#include <string.h>", "#include <string.h>"),
+    ("implicit declaration of function ‘procesar’ [-Wimplicit-function-declaration]", "procesar", "prototipo"),
+])
+def test_formato_y_declaracion_implicita_especificos(mensaje, en_titulo, en_sugerencia):
+    """QoL #183 y #174: qué especificador o qué cabecera corresponde, no una explicación genérica."""
+    titulo, _, sugerencia, *_ = traducir_linea_diagnostico_completo(mensaje)
+    assert en_titulo in titulo and en_sugerencia in sugerencia
+    assert "Sombreado" not in titulo
+
+
+def test_el_sombreado_sigue_traduciendose():
+    titulo = traducir_linea_diagnostico_completo("declaration of ‘x’ shadows a previous local [-Wshadow]")[0]
+    assert "Sombreado" in titulo

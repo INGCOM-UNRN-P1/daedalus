@@ -189,7 +189,9 @@ CATALOGO_GCC: Dict[str, Tuple[str, str, str, str, Optional[str], List[str]]] = {
         "-Wmaybe-uninitialized",
         []
     ),
-    "declaration of": (
+    # «declaration of 'x' shadows …»: la clave «declaration of» sola también atrapaba
+    # «include '<string.h>' or provide a declaration of 'strlen'» y lo explicaba como sombreado.
+    "shadows a ": (
         "Sombreado de Identificador (Variable Shadowing)",
         "Declaraste una variable en un bloque interno con el mismo nombre que otra en un ámbito exterior.",
         "La variable interna oculta a la externa, generando confusión sobre cuál se está modificando.",

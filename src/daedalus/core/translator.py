@@ -112,6 +112,92 @@ def normalizar_comillas(mensaje: str) -> str:
     return mensaje.translate(_COMILLAS_TIPOGRAFICAS)
 
 
+# QoL #183: el especificador que corresponde a cada tipo que informa GCC, para decir cuál usar en
+# lugar de una explicación genérica de printf/scanf.
+_ESPECIFICADOR_PRINTF = {
+    "int": "%d", "unsigned int": "%u", "long int": "%ld", "long unsigned int": "%lu",
+    "long long int": "%lld", "long long unsigned int": "%llu", "short int": "%hd",
+    "double": "%f", "float": "%f", "long double": "%Lf", "char": "%c", "char *": "%s",
+    "const char *": "%s", "void *": "%p",
+}
+_ESPECIFICADOR_SCANF = {
+    "int *": "%d", "unsigned int *": "%u", "long int *": "%ld", "long long int *": "%lld",
+    "double *": "%lf", "float *": "%f", "char *": "%s (o %c para un solo carácter)",
+}
+_FORMATO_TIPOS_RE = re.compile(
+    r"format '(?P<spec>%[^']*)' expects argument of type '(?P<esperado>[^']+)', "
+    r"but argument (?P<n>\d+) has type '(?P<real>[^']+)'")
+_FORMATO_FALTA_RE = re.compile(r"format '(?P<spec>%[^']*)' expects a matching '(?P<esperado>[^']+)' argument")
+
+# QoL #174: la cabecera de las funciones de biblioteca que más se usan en P1.
+_CABECERAS = {
+    "stdio.h": "printf scanf fprintf fscanf sprintf snprintf sscanf puts fputs fgets getchar putchar fopen fclose "
+               "fread fwrite fseek ftell rewind feof ferror perror remove rename fflush",
+    "stdlib.h": "malloc calloc realloc free exit abs atoi atof atol strtol strtod rand srand qsort bsearch system",
+    "string.h": "strlen strcpy strncpy strcat strncat strcmp strncmp strchr strrchr strstr strtok memcpy memmove "
+                "memset memcmp strdup",
+    "ctype.h": "isalpha isdigit isspace isupper islower isalnum ispunct toupper tolower",
+    "math.h": "sqrt pow fabs floor ceil round sin cos tan log log10 exp fmod",
+    "time.h": "time clock difftime",
+    "assert.h": "assert",
+}
+_CABECERA_DE = {f: cab for cab, funciones in _CABECERAS.items() for f in funciones.split()}
+_IMPLICITA_RE = re.compile(r"(?:incompatible )?implicit declaration of (?:built-in )?function '(?P<name>[A-Za-z_]\w*)'")
+_NOTA_INCLUDE_RE = re.compile(r"include '<(?P<cab>[^>]+)>' or provide a declaration of '(?P<name>[A-Za-z_]\w*)'")
+
+
+def _traduccion_especifica(mensaje: str) -> Optional[Tuple[str, str, str]]:
+    """Traducciones que dependen de lo que nombra el mensaje (tipos, función, cabecera)."""
+    m = _FORMATO_TIPOS_RE.search(mensaje)
+    if m:
+        spec, esperado, n, real = m.group("spec", "esperado", "n", "real")
+        titulo = f"`{spec}` espera `{esperado}`, pero el argumento {n} es `{real}`"
+        if spec == "%s" and not real.endswith("*") and "(*)" not in real:
+            # printf("%s", n) con un número: el `&` no corresponde (solo printf espera char * con %s).
+            otro = _ESPECIFICADOR_PRINTF.get(real)
+            return (titulo, "`%s` es para cadenas (un `char *` que termina en `'\\0'`).",
+                    f"Para un `{real}` usá `{otro}`." if otro else f"Pasá una cadena o cambiá `%s` por el especificador de `{real}`.")
+        if esperado.endswith("*") and not real.endswith("*") and "(*)" not in real:
+            return (titulo, "En `scanf` cada variable se pasa por su dirección, para que pueda guardar el valor leído.",
+                    f"Anteponé `&` al argumento {n} (por ejemplo `scanf(\"{spec}\", &variable)`).")
+        if "(*)[" in real and spec == "%s":
+            return (titulo, "Un arreglo de `char` ya es la dirección de su primer elemento: con `&` pasás un puntero "
+                            "al arreglo entero, que tiene otro tipo.",
+                    f"Quitá el `&` del argumento {n}: `scanf(\"%s\", nombre)`.")
+        correcto = _ESPECIFICADOR_SCANF.get(real) if esperado.endswith("*") else _ESPECIFICADOR_PRINTF.get(real)
+        explicacion = (f"El especificador `{spec}` le dice a la función que lea un `{esperado}`, pero recibe un "
+                       f"`{real}`: el valor se interpreta con otro tamaño y formato y se imprime o guarda mal.")
+        sugerencia = (f"Para `{real}` usá `{correcto}`." if correcto else
+                      f"Cambiá el especificador por el que corresponde a `{real}` o convertí el argumento {n}.")
+        return titulo, explicacion, sugerencia
+    m = _FORMATO_FALTA_RE.search(mensaje)
+    if m:
+        spec = m.group("spec")
+        return (f"Falta el argumento para `{spec}`",
+                f"La cadena de formato tiene más especificadores que argumentos: `{spec}` no tiene valor y la "
+                "función lee cualquier cosa de la memoria.",
+                "Agregá el argumento que falta o quitá el especificador sobrante.")
+    m = _NOTA_INCLUDE_RE.search(mensaje)
+    if m:
+        cab, nombre = m.group("cab", "name")
+        return (f"Falta `#include <{cab}>` para `{nombre}`",
+                f"`{nombre}` está declarada en `<{cab}>`.",
+                f"Agregá `#include <{cab}>` al principio del archivo.")
+    m = _IMPLICITA_RE.search(mensaje)
+    if m:
+        nombre = m.group("name")
+        cab = _CABECERA_DE.get(nombre)
+        explicacion = f"Se llamó a `{nombre}` sin que el compilador conozca su prototipo."
+        if cab:
+            return (f"Función usada sin prototipo: `{nombre}`",
+                    explicacion + f" `{nombre}` es de la biblioteca estándar y se declara en `<{cab}>`.",
+                    f"Agregá `#include <{cab}>` al principio del archivo.")
+        return (f"Función usada sin prototipo: `{nombre}`",
+                explicacion + " Si es tuya, falta el prototipo antes del uso (o la definición está más abajo).",
+                f"Declará el prototipo de `{nombre}` arriba del archivo (o en su `.h`) o revisá cómo está escrito el nombre.")
+    return None
+
+
 def traducir_linea_diagnostico_completo(
     mensaje: str,
 ) -> Tuple[str, str, str, Optional[str], Optional[str], Optional[str], List[str]]:
@@ -121,6 +207,10 @@ def traducir_linea_diagnostico_completo(
     mensaje = normalizar_comillas(mensaje)
     cat_title, cat_expl, cat_cause, cat_sugg, cat_flag, cat_cit, cat_flags = lookup_explanation(mensaje)
     has_catalog_match = cat_title != "Diagnóstico de Compilación GCC"
+
+    especifica = _traduccion_especifica(mensaje)
+    if especifica:
+        return (*especifica, cat_flag, cat_cause if has_catalog_match else None, cat_cit, cat_flags)
 
     for pattern, tit_tpl, exp_tpl, sug_tpl in REGLAS_TRADUCCION:
         m = re.search(pattern, mensaje, re.IGNORECASE)
