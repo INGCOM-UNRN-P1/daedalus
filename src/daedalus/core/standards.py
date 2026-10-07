@@ -81,7 +81,7 @@ def sugerir_flags_pedagogicos(
         "-Werror=implicit-function-declaration": "Impide usar funciones sin prototipo previo declarado en cabeceras.",
     }
 
-    for flag, motivo in recomendaciones.items():
+    for flag, _motivo in recomendaciones.items():
         if flag not in flags_set:
             faltantes.append(flag)
 

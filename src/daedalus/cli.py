@@ -132,7 +132,7 @@ def compile_cmd(
     # Mostrar diagnósticos pedagógicos
     console.print(f"\n[bold red]❌ Falló la compilación ({len(resultado.diagnosticos)} diagnósticos detectados):[/bold red]\n")
 
-    for idx, d in enumerate(resultado.diagnosticos, 1):
+    for _idx, d in enumerate(resultado.diagnosticos, 1):
         color = "red" if d.severidad == "error" else "yellow" if d.severidad == "warning" else "blue"
         if d.linea:
             loc = f"{d.archivo}:{d.linea}:{d.columna}"
