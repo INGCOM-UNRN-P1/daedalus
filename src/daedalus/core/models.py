@@ -65,6 +65,10 @@ class ResultadoCompilacion:
     stderr_crudo: str = ""
     suprimidos: int = 0
     pista: bool = False  # modo pista: sin líneas ni sugerencias (ver core/pista.py)
+    # Con aislar=True: si compiló dentro del sandbox de nostromo (None: no se pidió aislar).
+    aislado: Optional[bool] = None
+    # Si se reintentó sin -fsanitize porque el toolchain no trae libasan/libubsan.
+    sin_sanitizers: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         d = {
@@ -83,4 +87,8 @@ class ResultadoCompilacion:
             d["suppressed_count"] = self.suprimidos
         if self.pista:
             d["pista"] = True
+        if self.aislado is not None:
+            d["aislado"] = self.aislado
+        if self.sin_sanitizers:
+            d["sin_sanitizers"] = True
         return d

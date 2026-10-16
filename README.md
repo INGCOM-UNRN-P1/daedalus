@@ -33,6 +33,7 @@ DAEDALUS compila programas C bajo los estándares rigurosos de la cátedra (C11,
 
 ### Integración en el Ecosistema
 - CLI `daedalus`. Plugin en `ripley.plugins` (`compiler`). Consumido por `ripley` y `dredd`.
+- Como biblioteca, `daedalus.core.compiler.compilar_archivos(fuentes, binario, flags=…, aislar=…, reintentar_sin_sanitizers=…)`: `flags` reemplaza a los de cátedra (los de una actividad); `aislar=True` compila dentro del sandbox de `nostromo` (`ejecutar_comando_aislado`) y falla si nostromo no está, en lugar de compilar sin aislar; `reintentar_sin_sanitizers` repite sin `-fsanitize=` si el toolchain no trae libasan (MSYS2). El plugin acepta las mismas opciones (`reemplazar_flags`, `aislar`, `reintentar_sin_sanitizers`, `timeout`).
 
 ---
 

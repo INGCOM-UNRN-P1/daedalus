@@ -36,11 +36,18 @@ class DaedalusPlugin:
         flags = manifest_config.get("extra_flags") or manifest_config.get("flags")
         compilador = manifest_config.get("compiler")
 
+        # reemplazar_flags: los flags son los de la actividad y no se suman a los de cátedra
+        # (ripley evaluate); aislar: compilar dentro del sandbox de nostromo.
+        reemplazar = bool(manifest_config.get("reemplazar_flags"))
         res = compilar_archivos(
             fuentes=archivos_c,
             binario_salida=out_bin,
-            flags_adicionales=flags,
+            flags_adicionales=None if reemplazar else flags,
+            flags=flags if reemplazar else None,
             compilador=compilador,
+            aislar=bool(manifest_config.get("aislar")),
+            reintentar_sin_sanitizers=bool(manifest_config.get("reintentar_sin_sanitizers")),
+            **({"timeout": int(manifest_config["timeout"])} if manifest_config.get("timeout") else {}),
         )
 
         observaciones = []
@@ -89,4 +96,6 @@ class DaedalusPlugin:
             "total_observaciones": len(observaciones),
             "observaciones": observaciones,
             "metricas": {"codigo_retorno": res.codigo_retorno, "archivos": len(archivos_c)},
+            "aislado": res.aislado,
+            "sin_sanitizers": res.sin_sanitizers,
         }
