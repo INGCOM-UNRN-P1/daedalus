@@ -124,3 +124,32 @@ def test_formato_y_declaracion_implicita_especificos(mensaje, en_titulo, en_suge
 def test_el_sombreado_sigue_traduciendose():
     titulo = traducir_linea_diagnostico_completo("declaration of ‘x’ shadows a previous local [-Wshadow]")[0]
     assert "Sombreado" in titulo
+
+
+def test_json_con_archivo_relativo_y_explicacion(tmp_path, monkeypatch):
+    """Ola 7: el archivo de cada hallazgo es relativo al directorio de trabajo (gcc lo informa
+    absoluto si se lo llamó así) y trae la explicación en español que jonesy muestra con F1."""
+    import json
+
+    from typer.testing import CliRunner
+
+    from daedalus.cli import app
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "tp").mkdir()
+    log = tmp_path / "gcc.txt"
+    log.write_text(f"{tmp_path}/tp/main.c:4:5: error: expected ‘;’ before ‘return’\n"
+                   "tp/main.c:3:9: error: ‘x’ undeclared (first use in this function)\n", encoding="utf-8")
+    r = CliRunner().invoke(app, ["translate", str(log), "--json"])
+    datos = json.loads(r.stdout[r.stdout.find("{"):])
+    archivos = [h["archivo"] for h in datos["hallazgos"]]
+    assert archivos == ["tp/main.c", "tp/main.c"]
+    assert all(h.get("explicacion") for h in datos["hallazgos"])
+    claves = {"id", "herramienta", "codigo", "categoria", "severidad", "mensaje", "archivo", "linea", "columna",
+              "enlace"}
+    assert all(claves <= set(h) for h in datos["hallazgos"])
+    try:
+        from yutani.hallazgos import validar_salida  # type: ignore[attr-defined]
+    except ImportError:  # yutani anterior a 3fb723d
+        return
+    assert validar_salida(datos, tmp_path) == []

@@ -215,7 +215,17 @@ def translate_cmd(
         diagnosticos = [a_pista(d, fuentes_leidas) for d in diagnosticos]
 
     if json_output:
-        res_data = [d.to_dict() for d in diagnosticos]
+        # El mismo sobre que `compile --json` (antes una lista suelta): los clientes leen
+        # `hallazgos`, la forma común del ecosistema, sin distinguir de qué comando vino.
+        from daedalus.core.taxonomia import a_hallazgo
+        res_data: dict = {
+            "schema_version": "1.0.0",
+            "total_diagnosticos": len(diagnosticos),
+            "diagnosticos": [d.to_dict() for d in diagnosticos],
+            "hallazgos": [a_hallazgo(d) for d in diagnosticos if d.severidad != "note"],
+        }
+        if suprimidos:
+            res_data["suprimidos"] = suprimidos
         print(json.dumps(res_data, indent=2, ensure_ascii=False))
         raise typer.Exit(code=0)
 

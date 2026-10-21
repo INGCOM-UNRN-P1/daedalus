@@ -138,10 +138,15 @@ Traduce un bloque de texto o log de compilador a diagnósticos didácticos.
 | `--json` | `bool` | `False` | Salida en JSON. |
 | `--dedup` | `bool` | `False` | Suprimir advertencias repetitivas o en cascada. |
 | `--pista` | `bool` | `False` | Modo pista (o `P1_PISTA=1`): el tipo de error y la función, sin la línea ni la corrección. |
+| `--primer-error` | `bool` | `False` | Sólo el primer error con su causa: los siguientes suelen ser consecuencia de ese. |
+
+Con `--json` emite el mismo sobre que `compile --json` (`diagnosticos` y la lista plana
+`hallazgos` con la forma común de yutani, el `archivo` relativo al directorio de trabajo y la
+`explicacion` en español). Es lo que usa jonesy al compilar al guardar.
 
 #### Ejemplo de Invocación
 ```bash
-daedalus translate
+gcc main.c 2>&1 | daedalus translate --json --primer-error
 ```
 
 ### `daedalus doctor`

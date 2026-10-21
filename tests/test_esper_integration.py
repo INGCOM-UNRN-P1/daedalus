@@ -171,5 +171,5 @@ def test_cli_translate_dedup(tmp_path):
     res = runner.invoke(app, ["translate", str(log), "--json", "--dedup"])
     assert res.exit_code == 0
     data = json.loads(res.output)
-    assert len(data) == 2  # Se deduplica a máx 2
+    assert len(data["diagnosticos"]) == 2  # Se deduplica a máx 2
 

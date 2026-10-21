@@ -78,4 +78,4 @@ def test_translate_en_modo_pista(tmp_path, monkeypatch):
     log = tmp_path / "log.txt"
     log.write_text(f"{fuente}:7:22: error: expected ';' before 'return'\n", encoding="utf-8")
     datos = json.loads(runner.invoke(app, ["translate", str(log), "--json", "--pista"]).stdout)
-    assert datos[0]["linea"] is None and datos[0]["funcion"] == "suma"
+    assert datos["diagnosticos"][0]["linea"] is None and datos["diagnosticos"][0]["funcion"] == "suma"

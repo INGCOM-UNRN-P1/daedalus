@@ -3,8 +3,10 @@ categoría del programa, para que dredd agrupe por cohorte y la devolución enla
 
 from __future__ import annotations
 
+import os
 import re
-from typing import Any, Dict, List, Tuple
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 from yutani.hallazgos import hallazgo
 
@@ -50,7 +52,32 @@ def clasificar(d: DiagnosticoCompilacion) -> Tuple[str, str]:
     return "diagnostico", "compilacion"
 
 
+def ruta_relativa(ruta: Optional[str]) -> Optional[str]:
+    """El archivo como lo esperan jonesy y los demás clientes (yutani.hallazgos.ruta_archivo):
+    relativo al directorio de trabajo, con / y sin ./; afuera de él, absoluto. gcc lo informa
+    absoluto o relativo según cómo se lo llamó."""
+    if not ruta:
+        return None
+    p = Path(ruta.replace("\\", "/") if not ruta.startswith("/") else ruta)
+    if p.is_absolute():
+        try:
+            relativa = os.path.relpath(p, Path.cwd())
+        except ValueError:  # otra unidad en Windows
+            return p.as_posix()
+        if relativa == os.pardir or relativa.startswith(os.pardir + os.sep):
+            return p.as_posix()
+        p = Path(relativa)
+    return Path(os.path.normpath(p)).as_posix()
+
+
 def a_hallazgo(d: DiagnosticoCompilacion) -> Dict[str, Any]:
     codigo, categoria = clasificar(d)
-    return hallazgo("daedalus", codigo, categoria, d.severidad, d.titulo, archivo=d.archivo,
-                    linea=d.linea, columna=d.columna, sugerencia=d.sugerencia or None)
+    h = hallazgo("daedalus", codigo, categoria, d.severidad, d.titulo, archivo=ruta_relativa(d.archivo),
+                 linea=d.linea or None, columna=d.columna or None, sugerencia=d.sugerencia or None)
+    # El porqué en español, que jonesy muestra con F1 (clave opcional de la forma común).
+    explicacion = d.explicacion or ""
+    if d.causa_raiz and d.causa_raiz not in explicacion:
+        explicacion = f"{explicacion}\n\n{d.causa_raiz}".strip()
+    if explicacion:
+        h["explicacion"] = explicacion
+    return h
