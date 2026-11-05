@@ -99,7 +99,9 @@ CATALOGO_GCC: Dict[str, Tuple[str, str, str, str, Optional[str], List[str]]] = {
     ),
 
     # 3. Punteros y Tipos de Datos
-    "assignment to ‘int’ from ‘int *’": (
+    # Por el final del mensaje de GCC, que dice el sentido sea cual sea el tipo y la construcción
+    # («assignment to», «initialization of», «passing argument», «returning»).
+    "makes integer from pointer": (
         "Asignación Inválida de Puntero a Entero",
         "Intentaste guardar una dirección de memoria (puntero) directamente en una variable numérica entera sin desreferenciar.",
         "Falta el operador de desreferencia '*' o asignaste un puntero directamente a una variable de tipo 'int'.",
@@ -107,7 +109,7 @@ CATALOGO_GCC: Dict[str, Tuple[str, str, str, str, Optional[str], List[str]]] = {
         "-Wint-conversion",
         []
     ),
-    "assignment to ‘int *’ from ‘int’": (
+    "makes pointer from integer": (
         "Asignación Inválida de Entero a Puntero",
         "Intentaste asignar un número entero directamente a una variable de tipo puntero.",
         "Un puntero sólo puede almacenar direcciones de memoria válidas (obtenidas con '&var' o 'malloc').",
