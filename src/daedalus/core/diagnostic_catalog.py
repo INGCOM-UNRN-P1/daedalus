@@ -287,6 +287,17 @@ def _normalizar_comillas(texto: str) -> str:
     return texto.replace("‘", "'").replace("’", "'").replace("“", '"').replace("”", '"')
 
 
+def explicacion_por_flag(flag: str) -> Optional[Tuple[str, str, str, str, Optional[str], Optional[str], List[str]]]:
+    """La explicación de `flag` (`-Wuninitialized`), con la forma de `lookup_explanation`, o None.
+
+    Cuando un flag tiene varias entradas vale la primera. Sirve para los mensajes que el catálogo no
+    reconoce por su texto: GCC puede reescribirlos, pero el flag se mantiene."""
+    for title, expl, cause, sugg, entrada, flags_sugg in CATALOGO_GCC.values():
+        if entrada == flag:
+            return title, expl, cause, sugg, entrada, get_standard_citation(entrada), flags_sugg
+    return None
+
+
 def lookup_explanation(raw_msg: str) -> Tuple[str, str, str, str, Optional[str], Optional[str], List[str]]:
     """Busca la explicación más adecuada para un mensaje de error o warning de GCC.
     

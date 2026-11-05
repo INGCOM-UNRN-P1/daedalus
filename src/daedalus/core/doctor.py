@@ -45,7 +45,22 @@ def diagnosticar() -> List[Dict[str, Any]]:
             "proposito": desc,
             "sugerencia": "" if info["disponible"] else fix,
         })
-    return chequeos
+    return chequeos + [_chequeo_sarif()]
+
+
+def _chequeo_sarif() -> Dict[str, Any]:
+    """Si gcc emite SARIF. Sin él daedalus funciona igual, pero lee los diagnósticos del texto."""
+    from daedalus.core.compiler import soporta_sarif
+
+    ok = bool(shutil.which("gcc")) and soporta_sarif("gcc")
+    return {
+        "nombre": "gcc (SARIF)",
+        "requerido": False,
+        "ok": ok,
+        "detalle": "gcc emite diagnósticos estructurados" if ok else "gcc no emite SARIF: se leen del texto",
+        "proposito": "Línea, columna y flag exactos en cada diagnóstico",
+        "sugerencia": "" if ok else "Actualizá gcc a la versión 13 o posterior",
+    }
 
 
 def informe_json(chequeos: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -81,7 +96,7 @@ def ejecutar_diagnostico_doctor(console: Optional[Console] = None) -> bool:
                 todo_ok = False
             else:
                 estado = "[yellow]! Opcional[/yellow]"
-            detalles = "[dim]No encontrado en $PATH[/dim]"
+            detalles = f"[dim]{chequeo['detalle']}[/dim]"
             accion = f"{chequeo['proposito']} ↳ {chequeo['sugerencia']}"
         tabla.add_row(chequeo["nombre"], estado, detalles, accion)
 

@@ -431,6 +431,15 @@ Este encabezado garantiza la agregación determinista de los hallazgos en la rú
 | `2` | Error de sintaxis en argumentos CLI o archivo fuente no encontrado. |
 | `>2` | Error no recuperable del sistema, fallo de memoria o excepción interna. |
 
+### De dónde salen los diagnósticos
+
+Con GCC 13 o posterior, cuando la compilación informa algo, daedalus vuelve a compilar cada fuente con `-fdiagnostics-format=sarif-stderr` y lee línea, columna y flag de esa salida estructurada. El campo `motor` del JSON dice cuál se usó: `sarif` o `texto`.
+
+- Un mensaje que las reglas no reconocen se explica por su flag (`-Wuninitialized`), así que sobrevive a que GCC reescriba el texto.
+- Los errores de sintaxis no tienen flag: para ellos el mensaje sigue siendo la pista, y por eso gcc y ld se ejecutan siempre en inglés (`LC_ALL=C`), sin importar el idioma de la terminal.
+- Los errores del enlazador no se emiten como SARIF y se leen del texto.
+- Con un compilador sin SARIF (GCC anterior a 13, Clang) todo se lee del texto; `daedalus doctor` lo avisa.
+
 ### Diagnóstico del Entorno (`doctor`)
 Ante comportamientos inesperados, verificá el estado operativo con:
 ```bash

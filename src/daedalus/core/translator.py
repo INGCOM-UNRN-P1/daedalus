@@ -95,7 +95,8 @@ _GCC_LINE_RE = re.compile(
 )
 
 
-from daedalus.core.diagnostic_catalog import lookup_explanation
+from daedalus.core.diagnostic_catalog import explicacion_por_flag, lookup_explanation
+from daedalus.core.sarif import parsear_sarif_gcc
 
 
 # GCC y Clang en locale UTF-8 citan los identificadores con comillas
@@ -342,6 +343,47 @@ def parsear_stderr_compilador(stderr: str) -> List[DiagnosticoCompilacion]:
             titulo="Falló el enlazado",
             explicacion="El enlazador (ld) no pudo armar el ejecutable; el motivo está en las líneas anteriores del compilador.",
             sugerencia="Compilá con `-v` o mirá la salida completa de gcc para ver qué símbolo o biblioteca falta.",
+        ))
+    return diagnosticos
+
+
+def _traducir_con_flag(mensaje: str, flag: Optional[str]):
+    """Como `traducir_linea_diagnostico_completo`, pero un mensaje que no se reconoce se explica por
+    su flag. El mensaje va primero: sus reglas nombran el tipo o la función del alumno."""
+    traduccion = traducir_linea_diagnostico_completo(mensaje)
+    generico = traduccion[0] == "Diagnóstico del compilador" or traduccion[0].startswith("Advertencia de Compilador")
+    if flag and generico:
+        entrada = explicacion_por_flag(flag)
+        if entrada:
+            titulo, explicacion, causa, sugerencia, flag_catalogo, cita, sugeridos = entrada
+            return titulo, explicacion, sugerencia, flag_catalogo, causa, cita, sugeridos
+    return traduccion
+
+
+def traducir_desde_sarif(salida: str) -> Optional[List[DiagnosticoCompilacion]]:
+    """Los diagnósticos de una salida SARIF de GCC, o None si no se pudo leer."""
+    resultados = parsear_sarif_gcc(salida)
+    if resultados is None:
+        return None
+    diagnosticos: List[DiagnosticoCompilacion] = []
+    for r in resultados:
+        # El texto de GCC termina en «[-Wflag]»; en SARIF el flag va aparte. Se repone para que
+        # `mensaje_original` sea el mismo con los dos caminos.
+        mensaje = f"{r['mensaje']} [{r['regla']}]" if r["flag"] else r["mensaje"]
+        tit, exp, sug, flag, cause, cit, flags_sugg = _traducir_con_flag(mensaje, r["flag"])
+        diagnosticos.append(DiagnosticoCompilacion(
+            archivo=r["archivo"],
+            linea=r["linea"],
+            columna=r["columna"],
+            severidad=r["severidad"],
+            mensaje_original=normalizar_comillas(mensaje),
+            titulo=tit,
+            explicacion=exp,
+            sugerencia=sug,
+            flag=flag,
+            causa_raiz=cause,
+            cita_iso_c=cit,
+            flags_sugeridos=flags_sugg,
         ))
     return diagnosticos
 

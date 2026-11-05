@@ -69,6 +69,8 @@ class ResultadoCompilacion:
     aislado: Optional[bool] = None
     # Si se reintentó sin -fsanitize porque el toolchain no trae libasan/libubsan.
     sin_sanitizers: bool = False
+    # De dónde salieron los diagnósticos: "sarif" o "texto" (compilador sin SARIF, o solo el enlazador).
+    motor: str = "texto"
 
     def to_dict(self) -> Dict[str, Any]:
         d = {
@@ -76,6 +78,7 @@ class ResultadoCompilacion:
             "exito": self.exito,
             "codigo_retorno": self.codigo_retorno,
             "binario": str(self.binario) if self.binario else None,
+            "motor": self.motor,
             "total_diagnosticos": len(self.diagnosticos),
             "diagnosticos": [d.to_dict() for d in self.diagnosticos],
         }

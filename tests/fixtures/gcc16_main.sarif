@@ -1,0 +1,638 @@
+{
+ "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json",
+ "version": "2.1.0",
+ "runs": [
+  {
+   "tool": {
+    "driver": {
+     "name": "GNU C11",
+     "fullName": "GNU C11 (GCC) version 16.2.1 20260819 (Red Hat 16.2.1-2) (x86_64-redhat-linux)",
+     "version": "16.2.1 20260819 (Red Hat 16.2.1-2)",
+     "informationUri": "https://gcc.gnu.org/gcc-16/",
+     "rules": [
+      {
+       "id": "-Wint-conversion",
+       "helpUri": "https://gcc.gnu.org/onlinedocs/gcc-16.2.0/gcc/Warning-Options.html#index-Wint-conversion"
+      },
+      {
+       "id": "-Wformat=",
+       "helpUri": "https://gcc.gnu.org/onlinedocs/gcc-16.2.0/gcc/Warning-Options.html#index-Wformat"
+      },
+      {
+       "id": "-Wimplicit-function-declaration",
+       "helpUri": "https://gcc.gnu.org/onlinedocs/gcc-16.2.0/gcc/Warning-Options.html#index-Wimplicit-function-declaration"
+      },
+      {
+       "id": "-Wbuiltin-declaration-mismatch",
+       "helpUri": "https://gcc.gnu.org/onlinedocs/gcc-16.2.0/gcc/Warning-Options.html#index-Wbuiltin-declaration-mismatch"
+      },
+      {
+       "id": "-Wunused-value",
+       "helpUri": "https://gcc.gnu.org/onlinedocs/gcc-16.2.0/gcc/Warning-Options.html#index-Wno-unused-value"
+      },
+      {
+       "id": "-Wreturn-mismatch",
+       "helpUri": "https://gcc.gnu.org/onlinedocs/gcc-16.2.0/gcc/Warning-Options.html#index-Wno-return-mismatch"
+      },
+      {
+       "id": "-Wunused-variable",
+       "helpUri": "https://gcc.gnu.org/onlinedocs/gcc-16.2.0/gcc/Warning-Options.html#index-Wno-unused-variable"
+      },
+      {
+       "id": "-Werror=return-type",
+       "helpUri": "https://gcc.gnu.org/onlinedocs/gcc-16.2.0/gcc/Warning-Options.html#index-Wno-return-type"
+      }
+     ]
+    }
+   },
+   "results": [
+    {
+     "ruleId": "-Wint-conversion",
+     "level": "error",
+     "message": {
+      "text": "returning 'char *' from a function with return type 'int' makes integer from pointer without a cast"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "/tp/lib.h"
+        },
+        "region": {
+         "startLine": 1,
+         "startColumn": 26,
+         "endColumn": 29
+        },
+        "contextRegion": {
+         "startLine": 1,
+         "snippet": {
+          "text": "int doble(void) { return \"x\"; }\n"
+         }
+        }
+       },
+       "logicalLocations": [
+        {
+         "index": 0,
+         "fullyQualifiedName": "doble"
+        }
+       ],
+       "id": 0,
+       "relationships": [
+        {
+         "target": 1,
+         "kinds": [
+          "isIncludedBy"
+         ]
+        }
+       ]
+      }
+     ],
+     "relatedLocations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "/tp/main.c"
+        },
+        "region": {
+         "startLine": 1
+        },
+        "contextRegion": {
+         "startLine": 1,
+         "snippet": {
+          "text": "#include \"lib.h\"\n"
+         }
+        }
+       },
+       "relationships": [
+        {
+         "target": 0,
+         "kinds": [
+          "includes"
+         ]
+        }
+       ],
+       "id": 1
+      }
+     ]
+    },
+    {
+     "ruleId": "-Wformat=",
+     "level": "warning",
+     "message": {
+      "text": "format '%s' expects a matching 'char *' argument"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "/tp/main.c"
+        },
+        "region": {
+         "startLine": 5,
+         "startColumn": 20,
+         "endColumn": 22
+        },
+        "contextRegion": {
+         "startLine": 5,
+         "snippet": {
+          "text": "\tprintf(\"%d %s\\n\", x);\n"
+         }
+        }
+       },
+       "logicalLocations": [
+        {
+         "index": 1,
+         "fullyQualifiedName": "main"
+        }
+       ],
+       "annotations": [
+        {
+         "startLine": 5,
+         "startColumn": 20,
+         "endColumn": 22,
+         "message": {
+          "text": "char *"
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ruleId": "-Wimplicit-function-declaration",
+     "level": "error",
+     "message": {
+      "text": "implicit declaration of function 'strlen'"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "/tp/main.c"
+        },
+        "region": {
+         "startLine": 6,
+         "startColumn": 9,
+         "endColumn": 15
+        },
+        "contextRegion": {
+         "startLine": 6,
+         "snippet": {
+          "text": "\tstrlen(\"a\");\n"
+         }
+        }
+       },
+       "logicalLocations": [
+        {
+         "index": 1,
+         "fullyQualifiedName": "main"
+        }
+       ]
+      }
+     ],
+     "relatedLocations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "/tp/main.c"
+        },
+        "region": {
+         "startLine": 3,
+         "startColumn": 1,
+         "endColumn": 2
+        },
+        "contextRegion": {
+         "startLine": 3,
+         "snippet": {
+          "text": "int main(void) {\n"
+         }
+        }
+       },
+       "message": {
+        "text": "include '<string.h>' or provide a declaration of 'strlen'"
+       },
+       "properties": {
+        "nestingLevel": 0
+       }
+      }
+     ]
+    },
+    {
+     "ruleId": "-Wbuiltin-declaration-mismatch",
+     "level": "warning",
+     "message": {
+      "text": "incompatible implicit declaration of built-in function 'strlen'"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "/tp/main.c"
+        },
+        "region": {
+         "startLine": 6,
+         "startColumn": 9,
+         "endColumn": 15
+        },
+        "contextRegion": {
+         "startLine": 6,
+         "snippet": {
+          "text": "\tstrlen(\"a\");\n"
+         }
+        }
+       },
+       "logicalLocations": [
+        {
+         "index": 1,
+         "fullyQualifiedName": "main"
+        }
+       ]
+      }
+     ],
+     "relatedLocations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "/tp/main.c"
+        },
+        "region": {
+         "startLine": 6,
+         "startColumn": 9,
+         "endColumn": 15
+        },
+        "contextRegion": {
+         "startLine": 6,
+         "snippet": {
+          "text": "\tstrlen(\"a\");\n"
+         }
+        }
+       },
+       "message": {
+        "text": "include '<string.h>' or provide a declaration of 'strlen'"
+       },
+       "properties": {
+        "nestingLevel": 0
+       }
+      }
+     ]
+    },
+    {
+     "ruleId": "-Wunused-value",
+     "level": "warning",
+     "message": {
+      "text": "statement with no effect"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "/tp/main.c"
+        },
+        "region": {
+         "startLine": 6,
+         "startColumn": 9,
+         "endColumn": 15
+        },
+        "contextRegion": {
+         "startLine": 6,
+         "snippet": {
+          "text": "\tstrlen(\"a\");\n"
+         }
+        }
+       },
+       "logicalLocations": [
+        {
+         "index": 1,
+         "fullyQualifiedName": "main"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ruleId": "error",
+     "level": "error",
+     "message": {
+      "text": "'foo' undeclared (first use in this function)"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "/tp/main.c"
+        },
+        "region": {
+         "startLine": 7,
+         "startColumn": 9,
+         "endColumn": 12
+        },
+        "contextRegion": {
+         "startLine": 7,
+         "snippet": {
+          "text": "\tfoo = 3;\n"
+         }
+        }
+       },
+       "logicalLocations": [
+        {
+         "index": 1,
+         "fullyQualifiedName": "main"
+        }
+       ]
+      }
+     ],
+     "relatedLocations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "/tp/main.c"
+        },
+        "region": {
+         "startLine": 7,
+         "startColumn": 9,
+         "endColumn": 12
+        },
+        "contextRegion": {
+         "startLine": 7,
+         "snippet": {
+          "text": "\tfoo = 3;\n"
+         }
+        }
+       },
+       "message": {
+        "text": "each undeclared identifier is reported only once for each function it appears in"
+       },
+       "properties": {
+        "nestingLevel": 0
+       }
+      }
+     ]
+    },
+    {
+     "ruleId": "-Wint-conversion",
+     "level": "error",
+     "message": {
+      "text": "initialization of 'char *' from 'int' makes pointer from integer without a cast"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "/tp/main.c"
+        },
+        "region": {
+         "startLine": 8,
+         "startColumn": 19,
+         "endColumn": 20
+        },
+        "contextRegion": {
+         "startLine": 8,
+         "snippet": {
+          "text": "\tchar *p = 5;\n"
+         }
+        }
+       },
+       "logicalLocations": [
+        {
+         "index": 1,
+         "fullyQualifiedName": "main"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ruleId": "-Wreturn-mismatch",
+     "level": "error",
+     "message": {
+      "text": "'return' with no value, in function returning non-void"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "/tp/main.c"
+        },
+        "region": {
+         "startLine": 9,
+         "startColumn": 9,
+         "endColumn": 15
+        },
+        "contextRegion": {
+         "startLine": 9,
+         "snippet": {
+          "text": "\treturn;\n"
+         }
+        }
+       },
+       "logicalLocations": [
+        {
+         "index": 1,
+         "fullyQualifiedName": "main"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ruleId": "note",
+     "level": "note",
+     "message": {
+      "text": "declared here"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "/tp/main.c"
+        },
+        "region": {
+         "startLine": 3,
+         "startColumn": 5,
+         "endColumn": 9
+        },
+        "contextRegion": {
+         "startLine": 3,
+         "snippet": {
+          "text": "int main(void) {\n"
+         }
+        }
+       },
+       "logicalLocations": [
+        {
+         "index": 1,
+         "fullyQualifiedName": "main"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ruleId": "-Wunused-variable",
+     "level": "warning",
+     "message": {
+      "text": "unused variable 'p'"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "/tp/main.c"
+        },
+        "region": {
+         "startLine": 8,
+         "startColumn": 15,
+         "endColumn": 16
+        },
+        "contextRegion": {
+         "startLine": 8,
+         "snippet": {
+          "text": "\tchar *p = 5;\n"
+         }
+        }
+       },
+       "logicalLocations": [
+        {
+         "index": 1,
+         "fullyQualifiedName": "main"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ruleId": "error",
+     "level": "error",
+     "message": {
+      "text": "expected ',' or ';' before '}}' token"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "/tp/main.c"
+        },
+        "region": {
+         "startLine": 12,
+         "startColumn": 31,
+         "endColumn": 32
+        },
+        "contextRegion": {
+         "startLine": 12,
+         "snippet": {
+          "text": "void cierre(void) { int y = 1 }\n"
+         }
+        }
+       },
+       "logicalLocations": [
+        {
+         "index": 2,
+         "fullyQualifiedName": "cierre"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ruleId": "error",
+     "level": "error",
+     "message": {
+      "text": "expected declaration or statement at end of input"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "/tp/main.c"
+        },
+        "region": {
+         "startLine": 12,
+         "startColumn": 31,
+         "endColumn": 32
+        },
+        "contextRegion": {
+         "startLine": 12,
+         "snippet": {
+          "text": "void cierre(void) { int y = 1 }\n"
+         }
+        }
+       },
+       "logicalLocations": [
+        {
+         "index": 2,
+         "fullyQualifiedName": "cierre"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ruleId": "-Wunused-variable",
+     "level": "warning",
+     "message": {
+      "text": "unused variable 'y'"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "/tp/main.c"
+        },
+        "region": {
+         "startLine": 12,
+         "startColumn": 25,
+         "endColumn": 26
+        },
+        "contextRegion": {
+         "startLine": 12,
+         "snippet": {
+          "text": "void cierre(void) { int y = 1 }\n"
+         }
+        }
+       },
+       "logicalLocations": [
+        {
+         "index": 2,
+         "fullyQualifiedName": "cierre"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "ruleId": "-Werror=return-type",
+     "level": "error",
+     "message": {
+      "text": "control reaches end of non-void function"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "/tp/main.c"
+        },
+        "region": {
+         "startLine": 11,
+         "startColumn": 25,
+         "endColumn": 26
+        },
+        "contextRegion": {
+         "startLine": 11,
+         "snippet": {
+          "text": "int sin_retorno(void) { }\n"
+         }
+        }
+       },
+       "logicalLocations": [
+        {
+         "index": 3,
+         "fullyQualifiedName": "sin_retorno"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

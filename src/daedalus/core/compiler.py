@@ -6,11 +6,12 @@ import os
 import shutil
 import subprocess
 import tempfile
+from functools import lru_cache
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
-from daedalus.core.models import ResultadoCompilacion
-from daedalus.core.translator import parsear_stderr_compilador
+from daedalus.core.models import DiagnosticoCompilacion, ResultadoCompilacion
+from daedalus.core.translator import parsear_stderr_compilador, traducir_desde_sarif
 
 FLAGS_CATEDRA_DEFAULT = [
     "-std=c11",
@@ -70,6 +71,48 @@ class _SinSandbox(RuntimeError):
     pass
 
 
+FLAG_SARIF = "-fdiagnostics-format=sarif-stderr"
+
+
+@lru_cache(maxsize=None)
+def soporta_sarif(compilador: str = "gcc") -> bool:
+    """Si `compilador` emite SARIF por stderr: GCC 13 o posterior. Clang rechaza el flag y queda con
+    el camino de texto."""
+    try:
+        res = subprocess.run([compilador, FLAG_SARIF, "-x", "c", "-fsyntax-only", "-"], input="",
+                             capture_output=True, text=True, timeout=5, env={**os.environ, **ENTORNO_COMPILADOR})
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return res.returncode == 0
+
+
+def _diagnosticos_sarif(cc: str, opciones: List[str], fuentes: Sequence[Path], salida: Path, timeout: int,
+                        aislar: bool) -> Optional[List[DiagnosticoCompilacion]]:
+    """Los diagnósticos de compilación leídos de SARIF, o None si hay que quedarse con los del texto.
+
+    Es una pasada aparte porque SARIF reemplaza al texto en stderr, y `stderr_crudo` lo leen ripley,
+    dredd, tetsuo y sebastian. Va una fuente por vez porque `-c` con varias no admite `-o`, y `-c` y no
+    `-fsyntax-only` porque este último saltea las advertencias del optimizador (`-Wuninitialized`).
+    """
+    if not soporta_sarif(cc) or any(f.suffix != ".c" for f in fuentes):
+        return None
+    objeto = salida.with_name(salida.name + ".diag.o")
+    diagnosticos: List[DiagnosticoCompilacion] = []
+    try:
+        for fuente in fuentes:
+            cmd = [cc, *opciones, FLAG_SARIF, "-c", str(fuente), "-o", str(objeto)]
+            _, _, stderr, _ = _correr(cmd, timeout, aislar, list(fuentes), salida)
+            de_la_fuente = traducir_desde_sarif(stderr)
+            if de_la_fuente is None:
+                return None
+            diagnosticos.extend(de_la_fuente)
+    except (OSError, subprocess.SubprocessError, _SinSandbox):
+        return None
+    finally:
+        objeto.unlink(missing_ok=True)
+    return diagnosticos
+
+
 def compilar_archivos(
     fuentes: List[Path],
     binario_salida: Optional[Path] = None,
@@ -115,13 +158,23 @@ def compilar_archivos(
         return [cc, *opciones, *map(str, fuentes_abs), "-o", str(out_file.resolve()), "-lm"]
 
     try:
-        ret, stdout, stderr, aislado = _correr(comando(base), timeout, aislar, fuentes_abs, out_file)
+        opciones = base
+        ret, stdout, stderr, aislado = _correr(comando(opciones), timeout, aislar, fuentes_abs, out_file)
         sin_sanitizers = False
         if ret != 0 and reintentar_sin_sanitizers and _faltan_sanitizers(stderr):
-            limpias = [f for f in base if not f.startswith("-fsanitize=")]
-            ret, stdout, stderr, aislado = _correr(comando(limpias), timeout, aislar, fuentes_abs, out_file)
+            opciones = [f for f in base if not f.startswith("-fsanitize=")]
+            ret, stdout, stderr, aislado = _correr(comando(opciones), timeout, aislar, fuentes_abs, out_file)
             sin_sanitizers = True
         diagnosticos = parsear_stderr_compilador(stderr)
+        motor = "texto"
+        if stderr.strip():
+            del_texto = [d for d in diagnosticos if d.linea is not None]
+            de_sarif = _diagnosticos_sarif(cc, opciones, fuentes_abs, out_file, timeout, aislar)
+            # Una pasada SARIF vacía con diagnósticos en el texto no es creíble: vale el texto.
+            if de_sarif is not None and (de_sarif or not del_texto):
+                # Lo que no tiene línea es del enlazador, que no emite SARIF.
+                diagnosticos = de_sarif + [d for d in diagnosticos if d.linea is None]
+                motor = "sarif"
         exito = (ret == 0)
 
         return ResultadoCompilacion(
@@ -133,6 +186,7 @@ def compilar_archivos(
             stderr_crudo=stderr,
             aislado=aislado,
             sin_sanitizers=sin_sanitizers,
+            motor=motor,
         )
     except _SinSandbox as e:
         return ResultadoCompilacion(exito=False, codigo_retorno=2, stderr_crudo=str(e), aislado=False)
