@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -28,6 +30,12 @@ FLAGS_CATEDRA_DEFAULT = [
 SIN_SANITIZERS = ("libasan", "libubsan", "-lasan", "-lubsan")
 
 
+# Las reglas de traducción reconocen los mensajes en inglés. Con un locale en español (y gcc o
+# binutils con sus traducciones instaladas) el compilador decía «referencia a `g' sin definir» y el
+# alumno se quedaba sin explicación: se fija el idioma del compilador, no el de la terminal.
+ENTORNO_COMPILADOR = {"LC_ALL": "C"}
+
+
 def _faltan_sanitizers(stderr: str) -> bool:
     return "cannot find" in stderr and any(s in stderr for s in SIN_SANITIZERS)
 
@@ -35,7 +43,8 @@ def _faltan_sanitizers(stderr: str) -> bool:
 def _correr(cmd: List[str], timeout: int, aislar: bool, fuentes: List[Path], salida: Path):
     """(retorno, stdout, stderr, aislado) de un comando de compilación, aislado o no."""
     if not aislar:
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        res = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                             timeout=timeout, env={**os.environ, **ENTORNO_COMPILADOR})
         return res.returncode, res.stdout, res.stderr, None
     try:
         from nostromo.core.sandbox import ejecutar_comando_aislado
@@ -48,7 +57,9 @@ def _correr(cmd: List[str], timeout: int, aislar: bool, fuentes: List[Path], sal
     incluidas = [Path(o[2:]) for o in cmd if o.startswith("-I") and len(o) > 2]
     incluidas += [Path(cmd[i + 1]) for i, o in enumerate(cmd[:-1]) if o == "-I"]
     legibles = sorted({f.resolve().parent for f in fuentes} | {d.resolve() for d in incluidas if d.is_dir()})
-    r = ejecutar_comando_aislado(cmd, escribibles=[salida.resolve().parent], legibles=legibles,
+    # nostromo hereda el entorno y no deja pasar uno propio: el idioma se fija con `env`.
+    fijar_idioma = ["env", *(f"{k}={v}" for k, v in ENTORNO_COMPILADOR.items())] if shutil.which("env") else []
+    r = ejecutar_comando_aislado([*fijar_idioma, *cmd], escribibles=[salida.resolve().parent], legibles=legibles,
                                  directorio=salida.resolve().parent, timeout_segundos=timeout)
     if r.error_tipo == "TIMEOUT":
         raise subprocess.TimeoutExpired(cmd, timeout)
