@@ -184,7 +184,8 @@ def test_no_quedan_archivos_de_la_pasada(tmp_path):
 
     compilar_archivos([fuente], binario_salida=tmp_path / "prog")
 
-    assert sorted(p.name for p in tmp_path.iterdir()) == ["main.c", "prog"]
+    # En Windows gcc agrega .exe al binario.
+    assert sorted(p.stem for p in tmp_path.iterdir()) == ["main", "prog"]
 
 
 @con_sarif
