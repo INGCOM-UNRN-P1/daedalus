@@ -297,7 +297,7 @@ def explain_opt_cmd(
         "O0": ("Sin optimizaciones (Default)", "Compilación rápida y depuración paso a paso perfecta con GDB. No elimina código muerto ni reordena instrucciones."),
         "O1": ("Optimización básica", "Reduce tamaño y tiempo de ejecución sin aumentar el tiempo de compilación. Puede activar advertencias de variables no inicializadas."),
         "O2": ("Optimización estándar de cátedra/producción", "Aplica vectorización básica, inlining de funciones chicas y análisis profundo de flujo de datos. Muchas advertencias pedagógicas de GCC requieren -O2 para detectar variables no inicializadas."),
-        "O3": ("Optimización agresiva", "Aplica desenrollado de bucles (loop unrolling), vectorización SIMD agresiva y reordenamiento de memoria. Puede alterar el orden de instrucciones y dificultar depuración."),
+        "O3": ("Optimización agresiva", "Aplica desenrollado de lazos (loop unrolling), vectorización SIMD agresiva y reordenamiento de memoria. Puede alterar el orden de instrucciones y dificultar depuración."),
         "OS": ("Optimización para tamaño", "Deshabilita optimizaciones que incrementen el tamaño del binario. Ideal para microcontroladores y C embebido."),
         "OG": ("Optimización para depuración", "Aplica optimizaciones que no interfieren con la experiencia de depuración paso a paso con GDB."),
     }

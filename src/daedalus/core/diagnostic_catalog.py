@@ -84,7 +84,7 @@ CATALOGO_GCC: Dict[str, Tuple[str, str, str, str, Optional[str], List[str]]] = {
     "format not a string literal and no format arguments": (
         "Vulnerabilidad de Cadena de Formato (Format String)",
         "Pasaste una variable directamente como primer argumento de printf(msg) sin especificador.",
-        "Si la variable contiene caracteres '%' ingresados por el usuario, el programa intentará leer de la pila provocando crashes o fallos de seguridad.",
+        "Si la variable contiene caracteres '%' ingresados por el usuario, el programa intentará leer de la pila provocando fallas o problemas de seguridad.",
         "Escribí siempre 'printf(\"%s\", msg);' en lugar de 'printf(msg);'.",
         "-Wformat-security",
         []
