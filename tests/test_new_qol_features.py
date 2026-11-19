@@ -134,3 +134,50 @@ def test_check_standards(tmp_path: Path):
     result = runner.invoke(app, ["check-standards", str(c_file)])
     assert result.exit_code == 0
     assert "C11" in result.output
+
+
+def test_api_publica_compilar_y_traducir(tmp_path: Path):
+    from daedalus import compilar_archivos, traducir
+
+    diags = traducir("main.c:4:9: error: 'x' undeclared (first use in this function)\n")
+    assert len(diags) == 1
+    assert diags[0].linea == 4
+
+    fuente = tmp_path / "ok.c"
+    fuente.write_text("int main(void) { return 0; }\n", encoding="utf-8")
+    res = compilar_archivos([fuente])
+    assert res.exito is True
+
+
+def test_explain_first_y_telemetria_por_cohorte(tmp_path: Path, monkeypatch):
+    from daedalus import traducir
+
+    log = tmp_path / "err.log"
+    log.write_text(
+        "main.c:3:5: error: 'a' undeclared (first use in this function)\n"
+        "main.c:4:5: error: 'b' undeclared (first use in this function)\n",
+        encoding="utf-8",
+    )
+    res = runner.invoke(app, ["translate", str(log), "--explain-first", "--json"])
+    assert res.exit_code == 0
+    datos = json.loads(res.output)
+    assert datos["total_diagnosticos"] == 1
+    assert datos["suprimidos"] == 1
+
+    hist = tmp_path / "cohorte_hist.json"
+    monkeypatch.setenv("DAEDALUS_HISTORIAL", str(hist))
+    diags = traducir(log.read_text(encoding="utf-8"))
+    registrar_diagnosticos(diags, [Path("main.c")], cohorte="2026-2")
+    registrar_diagnosticos(diags[:1], [Path("main.c")], cohorte="2027-1")
+
+    stats_26 = obtener_estadisticas(cohorte="2026-2")
+    assert stats_26["cohorte"] == "2026-2"
+    assert stats_26["total_sesiones"] == 1
+    assert stats_26["total_diagnosticos"] == 2
+    assert stats_26["frecuencia_categorias"].get("declaraciones") == 2
+    assert len(stats_26["secciones_apunte"]) >= 1
+
+    # Opt-out de telemetría local
+    monkeypatch.setenv("DAEDALUS_TELEMETRIA", "0")
+    registrar_diagnosticos(diags, [Path("main.c")], cohorte="2026-2")
+    assert obtener_estadisticas(cohorte="2026-2")["total_sesiones"] == 1

@@ -80,7 +80,7 @@ def compile_cmd(
     guide: bool = typer.Option(False, "--guide", help="Generar guía detallada paso a paso en Markdown."),
     dedup: bool = typer.Option(False, "--dedup", help="Suprimir advertencias repetitivas o en cascada."),
     pista: bool = typer.Option(False, "--pista", help="Modo pista (o P1_PISTA=1): el tipo de error y la función, sin la línea ni la corrección."),
-    primero: bool = typer.Option(False, "--primer-error", help="Mostrar solo el primer error con su causa: los siguientes suelen ser consecuencia de ese."),
+    primero: bool = typer.Option(False, "--primer-error", "--explain-first", help="Mostrar solo el primer error con su causa raíz: los siguientes suelen ser consecuencia de ese."),
 ) -> None:
     """Compila código C con banderas estrictas de cátedra y traduce errores a español didáctico."""
     extra_flags = flags.split() if flags else None
@@ -145,6 +145,8 @@ def compile_cmd(
             f"📍 [bold]Ubicación:[/bold] [yellow]{loc}[/yellow]\n"
             f"🔍 [bold]Causa:[/bold] {d.explicacion}"
         )
+        if d.causa_raiz and d.causa_raiz not in d.explicacion:
+            cuerpo += f"\n🎯 [bold]Causa raíz:[/bold] {d.causa_raiz}"
         if d.sugerencia:
             cuerpo += f"\n\n💡 [bold green]Sugerencia:[/bold green] {d.sugerencia}"
         if d.mensaje_original:
@@ -188,7 +190,7 @@ def translate_cmd(
     json_output: bool = typer.Option(False, "--json", help="Salida en JSON."),
     dedup: bool = typer.Option(False, "--dedup", help="Suprimir advertencias repetitivas o en cascada."),
     pista: bool = typer.Option(False, "--pista", help="Modo pista (o P1_PISTA=1): el tipo de error y la función, sin la línea ni la corrección."),
-    primero: bool = typer.Option(False, "--primer-error", help="Mostrar solo el primer error con su causa: los siguientes suelen ser consecuencia de ese."),
+    primero: bool = typer.Option(False, "--primer-error", "--explain-first", help="Mostrar solo el primer error con su causa raíz: los siguientes suelen ser consecuencia de ese."),
 ) -> None:
     """Traduce un bloque de texto o log de compilador a diagnósticos didácticos."""
     # Un archivo que no existe caía a leer stdin: en un script daba «No se encontraron errores»
@@ -236,6 +238,8 @@ def translate_cmd(
     for d in diagnosticos:
         donde = f"{d.archivo}:{d.linea}" if d.linea else (f"{d.archivo}, en {d.funcion}()" if d.funcion else d.archivo)
         console.print(f"[bold red]• {d.titulo}[/bold red] ({donde}): {d.explicacion}")
+        if d.causa_raiz and d.causa_raiz not in d.explicacion:
+            console.print(f"  [dim]Causa raíz:[/dim] {d.causa_raiz}")
 
     if suprimidos > 0:
         console.print(f"[dim]ℹ Se suprimieron {suprimidos} advertencias repetitivas o en cascada para mayor claridad.[/dim]")
@@ -357,9 +361,10 @@ def expand_macro_cmd(
 @app.command("history")
 def stats_cmd(
     json_output: bool = typer.Option(False, "--json", help="Emitir estadísticas en JSON."),
+    cohorte: Optional[str] = typer.Option(None, "--cohorte", help="Filtrar estadísticas por cohorte (ej. 2026-2)."),
 ) -> None:
-    """Muestra el historial y estadísticas de errores frecuentes del estudiante."""
-    datos = obtener_estadisticas()
+    """Muestra el historial y estadísticas de errores frecuentes del estudiante o cohorte."""
+    datos = obtener_estadisticas(cohorte=cohorte)
     if json_output:
         print(json.dumps(datos, indent=2, ensure_ascii=False))
         raise typer.Exit(code=0)
@@ -376,6 +381,13 @@ def stats_cmd(
     else:
         console.print(f"Total de sesiones registradas: [bold cyan]{datos['total_sesiones']}[/bold cyan] (Errores totales: [bold]{datos['total_diagnosticos']}[/bold])")
         console.print(tabla)
+        if datos.get("secciones_apunte"):
+            tabla_ap = Table(title="📖 Secciones del Apunte / Referencias más demandadas")
+            tabla_ap.add_column("Sección / Referencia", style="yellow")
+            tabla_ap.add_column("Ocurrencias", justify="right", style="cyan")
+            for sec, count in datos["secciones_apunte"].items():
+                tabla_ap.add_row(sec, str(count))
+            console.print(tabla_ap)
 
 
 @app.command("check-flags")
